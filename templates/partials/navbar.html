@@ -1,0 +1,10 @@
+{% load interface %}
+<header x-data="navbar" @scroll.window="rolar" :class="classeNav" class="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/80 backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-300 ease-out dark:border-zinc-800 dark:bg-zinc-950/75">
+  <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8" aria-label="Principal">
+    <a href="{% url 'mapa:inicio' %}" class="focus-ring flex items-center gap-2.5 rounded-lg">
+      <span class="grid size-8 place-items-center rounded-lg bg-red-600 text-white shadow-sm shadow-red-950/20 dark:bg-red-500 dark:shadow-none">{% icone "carro" "size-4.5" %}</span>
+      <span class="text-[15px] font-semibold tracking-tight">Carros em Washington</span>
+    </a>
+    {% include "partials/seletor_tema.html" with nome="tema-navbar" %}
+  </nav>
+</header>

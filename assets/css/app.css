@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+/* Onde o Tailwind procura classes */
+@source "../../templates";
+@source "../../mapa/templates";
+@source "../../mapa/templatetags";
+@source "../../static/js";
+
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308,
+    U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Inter Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.36, 0.64, 1);
+
+  /* Séries dos gráficos (paleta validada com validate_palette.js nos dois temas): fill-serie-1, bg-serie-2... */
+  --color-serie-1: #2a78d6;
+  --color-serie-2: #eb6834;
+  --color-serie-3: #1baf7a;
+  /* Rampa sequencial azul do coroplético (quanto mais escuro, mais veículos): fill-seq-0 ... fill-seq-5 */
+  --color-seq-0: #b7d3f6;
+  --color-seq-1: #86b6ef;
+  --color-seq-2: #5598e7;
+  --color-seq-3: #2a78d6;
+  --color-seq-4: #1c5cab;
+  --color-seq-5: #104281;
+
+  --animate-surgir: surgir 450ms var(--ease-bounce) both;
+  --animate-pulsar: pulsar 1.6s ease-out infinite;
+
+  @keyframes surgir {
+    from {
+      opacity: 0;
+      transform: scale(0.4) translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pulsar {
+    0% {
+      opacity: 0.55;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(2.6);
+    }
+  }
+}
+
+@custom-variant aria-invalid (&[aria-invalid="true"]);
+@custom-variant dark (&:where(.dark, .dark *));
+
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--focus-cor, var(--color-zinc-900));
+    outline-offset: 2px;
+  }
+}
+
+@layer base {
+  html {
+    font-feature-settings: "cv11", "ss01";
+    -webkit-tap-highlight-color: transparent;
+  }
+  [x-cloak] {
+    display: none !important;
+  }
+  .dark {
+    --focus-cor: var(--color-zinc-100);
+    /* Mesmos matizes, passos escolhidos para o fundo escuro */
+    --color-serie-1: #3987e5;
+    --color-serie-2: #d95926;
+    --color-serie-3: #199e70;
+    /* No escuro, o "quase zero" se apaga no fundo: a rampa inverte */
+    --color-seq-0: #0d366b;
+    --color-seq-1: #184f95;
+    --color-seq-2: #256abf;
+    --color-seq-3: #3987e5;
+    --color-seq-4: #6da7ec;
+    --color-seq-5: #9ec5f4;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  ::selection {
+    background: var(--color-zinc-900);
+    color: white;
+  }
+  .dark ::selection {
+    background: var(--color-zinc-100);
+    color: var(--color-zinc-900);
+  }
+  .sem-transicao,
+  .sem-transicao *:not([data-anima-tema]),
+  .sem-transicao *::before,
+  .sem-transicao *::after {
+    transition: none !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .btn {
+    @apply focus-ring inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium whitespace-nowrap transition duration-150 ease-out select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-zinc-900 text-white shadow-sm shadow-zinc-950/20 hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:shadow-none dark:hover:bg-zinc-200;
+  }
+  .btn-secondary {
+    @apply border border-zinc-200 bg-white text-zinc-900 shadow-xs hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:shadow-none dark:hover:border-zinc-600 dark:hover:bg-zinc-800;
+  }
+  .btn-ghost {
+    @apply text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50;
+  }
+  .input,
+  .select {
+    @apply block h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 shadow-xs transition duration-150 ease-out placeholder:text-zinc-400 hover:border-zinc-400 focus:border-zinc-900 focus:ring-3 focus:ring-zinc-900/10 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:hover:border-zinc-600 dark:focus:border-zinc-300 dark:focus:ring-white/10;
+  }
+  .select {
+    @apply cursor-pointer appearance-none bg-no-repeat pr-9;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+    background-position: right 0.625rem center;
+    background-size: 1rem;
+  }
+  .card {
+    @apply rounded-2xl bg-white shadow-xs ring-1 ring-zinc-950/5 dark:bg-zinc-900 dark:shadow-none dark:ring-white/10;
+  }
+  .tema-opcao {
+    @apply relative grid size-7 cursor-pointer place-items-center rounded-full text-zinc-500 transition duration-150 ease-out hover:text-zinc-900 has-[:checked]:bg-white has-[:checked]:text-zinc-900 has-[:checked]:shadow-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50 dark:has-[:checked]:bg-zinc-700 dark:has-[:checked]:text-zinc-50 dark:has-[:focus-visible]:outline-zinc-100;
+  }
+}
+
+.htmx-indicator {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  opacity: 1;
+}

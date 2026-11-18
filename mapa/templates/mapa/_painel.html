@@ -1,0 +1,337 @@
+{% load interface %}
+<section id="painel" data-condado="{{ condado|default:'' }}" data-graficos="{{ graficos_json }}" aria-labelledby="titulo-painel" class="mt-24 scroll-mt-24 transition-opacity duration-200 [&.htmx-request]:opacity-60">
+  <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <p class="{% classe 'secao-rotulo' %}"><span class="size-1.5 rounded-full bg-red-500" aria-hidden="true"></span>Painel da frota</p>
+      <h2 id="titulo-painel" class="{% classe 'secao-titulo' %}">{% if condado %}Condado de {{ condado }}{% else %}Estado de Washington{% endif %}</h2>
+      <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Frota registrada no DOL, vendas de carros novos, adoção por habitante e recarga pública.</p>
+    </div>
+
+    <form method="get" action="{% url 'mapa:inicio' %}#painel" hx-get="{% url 'mapa:inicio' %}" hx-target="#painel" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#painel" hx-trigger="change from:#f-condado"
+          class="flex items-center gap-2">
+      <label for="f-condado" class="sr-only">Condado</label>
+      <select id="f-condado" name="condado" class="select w-full sm:w-60">
+        <option value="">Todos os condados</option>
+        {% for nome in condados %}<option value="{{ nome }}"{% if nome == condado %} selected{% endif %}>{{ nome }}</option>{% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn btn-secondary">Filtrar</button></noscript>
+      {% if condado %}
+      <a href="{% url 'mapa:inicio' %}#painel" hx-get="{% url 'mapa:inicio' %}" hx-target="#painel" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#painel" class="btn btn-ghost">Limpar</a>
+      {% endif %}
+    </form>
+  </div>
+
+  {# ---------- Números principais ---------- #}
+  <dl class="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="card col-span-2 p-5 lg:col-span-1">
+      <dt class="{% classe 'kpi-rotulo' %}">Veículos registrados</dt>
+      <dd class="mt-2 text-5xl font-semibold tracking-tight">{{ painel.total|floatformat:"0g" }}</dd>
+      <dd class="{% classe 'kpi-nota' %}">{% if adocao_atual %}{{ adocao_atual.por_mil|floatformat:1 }} por mil habitantes{% else %}{{ adocao.por_mil_estado|floatformat:1 }} por mil habitantes{% endif %}</dd>
+    </div>
+    <div class="card p-5">
+      <dt class="{% classe 'kpi-rotulo' %}">100% elétricos (BEV)</dt>
+      <dd class="{% classe 'kpi-valor' %}">{{ painel.pct_bev|floatformat:1 }}%</dd>
+      <dd class="{% classe 'kpi-nota' %}">{{ painel.bev|floatformat:"0g" }} BEV · {{ painel.phev|floatformat:"0g" }} PHEV</dd>
+    </div>
+    <div class="card p-5">
+      <dt class="{% classe 'kpi-rotulo' %}">Montadora líder</dt>
+      <dd class="{% classe 'kpi-valor' %} truncate">{{ painel.montadora_lider.nome|default:"–" }}</dd>
+      <dd class="{% classe 'kpi-nota' %}">{% if painel.montadora_lider %}{{ painel.montadora_lider.pct|floatformat:1 }}% da frota{% endif %}</dd>
+    </div>
+    <div class="card col-span-2 p-5 lg:col-span-1">
+      <dt class="{% classe 'kpi-rotulo' %}">Veículos por ponto de recarga</dt>
+      <dd class="{% classe 'kpi-valor' %}">{% if recarga_atual.por_ponto %}{{ recarga_atual.por_ponto|floatformat:1 }}{% else %}–{% endif %}</dd>
+      <dd class="{% classe 'kpi-nota' %}">{% if recarga_atual.pontos %}{{ recarga_atual.pontos|floatformat:"0g" }} pontos públicos em {{ recarga_atual.estacoes|floatformat:"0g" }} estações{% else %}nenhum ponto público cadastrado{% endif %}</dd>
+    </div>
+  </dl>
+
+  {# ---------- Vendas de carros novos e o fim do crédito federal ---------- #}
+  <div class="mt-3 grid gap-3 lg:grid-cols-3">
+    <article class="card p-5 lg:col-span-2" aria-labelledby="titulo-vendas">
+      <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+        <div>
+          <h3 id="titulo-vendas" class="{% classe 'card-titulo' %}">Carros elétricos novos vendidos por mês</h3>
+          <p class="{% classe 'card-descricao' %}">Primeiro título de veículo novo no DOL. O mês mais recente fica de fora: ainda está sendo registrado.</p>
+        </div>
+        <ul class="{% classe 'legenda' %}" aria-label="Legenda">
+          <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-serie-1" aria-hidden="true"></span>BEV</li>
+          <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-serie-2" aria-hidden="true"></span>PHEV</li>
+        </ul>
+      </div>
+      <div data-grafico="vendas" class="mt-4 h-72" role="img" aria-label="Gráfico de linhas com as vendas mensais de BEV e PHEV novos. Os valores estão na tabela abaixo."></div>
+      <details class="mt-3">
+        <summary class="{% classe 'ver-dados' %}">Ver dados</summary>
+        <div class="mt-2 max-h-64 overflow-auto">
+          <table class="{% classe 'tabela' %}">
+            <thead><tr><th scope="col">Mês</th><th scope="col">BEV</th><th scope="col">PHEV</th></tr></thead>
+            <tbody>{% for linha in vendas reversed %}<tr><th scope="row">{{ linha.mes }}</th><td>{{ linha.bev|floatformat:"0g" }}</td><td>{{ linha.phev|floatformat:"0g" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+    </article>
+
+    <article class="card p-5" aria-labelledby="titulo-credito">
+      <h3 id="titulo-credito" class="{% classe 'card-titulo' %}">Depois do fim do crédito federal</h3>
+      <p class="{% classe 'card-descricao' %}">O crédito de US$ 7.500 acabou para compras depois de 30/09/2025. Cada mês é comparado com o mesmo mês do ano anterior.</p>
+      {% if efeito and efeito.variacao_pct is not None %}
+      <p class="mt-5 text-5xl font-semibold tracking-tight">{% if efeito.variacao_pct > 0 %}+{% endif %}{{ efeito.variacao_pct|floatformat:1 }}%</p>
+      <p class="{% classe 'kpi-nota' %}">{{ efeito.depois|floatformat:"0g" }} vendas de {{ efeito.periodo }}, contra {{ efeito.antes|floatformat:"0g" }} de {{ efeito.periodo_anterior }}.</p>
+      <dl class="mt-5 grid grid-cols-2 gap-2">
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Teste t pareado</dt>
+          <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_t|valor_p }}</dd>
+        </div>
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Wilcoxon</dt>
+          <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_wilcoxon|valor_p }}</dd>
+        </div>
+      </dl>
+      <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
+        {% if efeito.significativo %}A queda é estatisticamente significativa ({{ efeito.meses }} meses pareados, α = 5%).{% else %}Com {{ efeito.meses }} meses pareados, a diferença ainda não é significativa neste recorte (α = 5%).{% endif %}
+        {% if efeito.corrida_pct is not None %}Jul a set/2025, antes do prazo: {% if efeito.corrida_pct > 0 %}+{% endif %}{{ efeito.corrida_pct|floatformat:1 }}% contra 2024.{% endif %}
+      </p>
+      {% else %}
+      <p class="{% classe 'vazio' %} mt-6">Poucas vendas neste recorte para comparar.</p>
+      {% endif %}
+    </article>
+  </div>
+
+  {# ---------- Frota por ano-modelo + leitura operacional ---------- #}
+  <div class="mt-3 grid gap-3 lg:grid-cols-3">
+    <article class="card p-5 lg:col-span-2" aria-labelledby="titulo-anos">
+      <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+        <div>
+          <h3 id="titulo-anos" class="{% classe 'card-titulo' %}">Frota atual por ano-modelo</h3>
+          <p class="{% classe 'card-descricao' %}">Veículos registrados hoje, pelo ano do modelo (não é o ano da venda).</p>
+        </div>
+        <ul class="{% classe 'legenda' %}" aria-label="Legenda">
+          <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-serie-1" aria-hidden="true"></span>100% elétrico (BEV)</li>
+          <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-serie-2" aria-hidden="true"></span>Híbrido plug-in (PHEV)</li>
+        </ul>
+      </div>
+      <div data-grafico="anos" class="mt-4 h-72" role="img" aria-label="Gráfico de colunas empilhadas com a frota por ano-modelo, BEV e PHEV. Os valores estão na tabela abaixo."></div>
+      <details class="mt-3">
+        <summary class="{% classe 'ver-dados' %}">Ver dados</summary>
+        <div class="mt-2 max-h-64 overflow-auto">
+          <table class="{% classe 'tabela' %}">
+            <thead><tr><th scope="col">Ano-modelo</th><th scope="col">BEV</th><th scope="col">PHEV</th></tr></thead>
+            <tbody>{% for linha in painel.anos %}<tr><th scope="row">{{ linha.ano }}</th><td>{{ linha.bev|floatformat:"0g" }}</td><td>{{ linha.phev|floatformat:"0g" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+    </article>
+
+    <article class="card p-5" aria-labelledby="titulo-leitura">
+      <h3 id="titulo-leitura" class="{% classe 'card-titulo' %} flex items-center gap-2">{% icone "alvo" "size-4 text-red-600 dark:text-red-400" %}Leitura operacional</h3>
+      <ul class="mt-4 space-y-4">
+        {% for ponto in leitura %}
+        <li class="flex gap-3 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
+          <span class="mt-2.5 size-1.5 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-500" aria-hidden="true"></span>{{ ponto }}
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+  </div>
+
+  {# ---------- Elegibilidade CAFV ---------- #}
+  <article class="card mt-3 p-5" aria-labelledby="titulo-cafv">
+    <div class="flex flex-wrap items-start justify-between gap-2">
+      <div>
+        <h3 id="titulo-cafv" class="{% classe 'card-titulo' %}">Elegibilidade a incentivos (CAFV)</h3>
+        <p class="{% classe 'card-descricao' %}">Sem a autonomia pesquisada, o estado não consegue dizer se o veículo tem direito ao incentivo.</p>
+      </div>
+      <span class="{% classe 'selo-alerta' %}">{% icone "alerta" "size-3.5" %}{{ painel.pct_desconhecida|floatformat:0 }}% sem dado</span>
+    </div>
+    <div data-grafico="elegibilidade" class="mt-5 h-7" role="img" aria-label="Barra segmentada da elegibilidade CAFV. Os valores estão na legenda."></div>
+    <ul class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-xs text-zinc-600 dark:text-zinc-300" aria-label="Legenda">
+      {% for parte in painel.elegibilidade %}
+      <li class="flex items-center gap-1.5">
+        <span class="size-2.5 rounded-sm {% cycle 'bg-serie-1' 'bg-serie-2' 'bg-serie-3' %}" aria-hidden="true"></span>
+        {{ parte.nome }}
+        <span class="text-zinc-500 tabular-nums dark:text-zinc-400">{{ parte.total|floatformat:"0g" }} ({{ parte.pct|floatformat:1 }}%)</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  {# ---------- Rankings ---------- #}
+  <div class="mt-3 grid gap-3 lg:grid-cols-3">
+    <article class="card p-5" aria-labelledby="titulo-modelos">
+      <h3 id="titulo-modelos" class="{% classe 'card-titulo' %}">Modelos mais registrados</h3>
+      <p class="{% classe 'card-descricao' %} mb-5">{% if condado %}Os carros que mais circulam em {{ condado }}.{% else %}Os carros que mais circulam no estado.{% endif %}</p>
+      {% include "partials/ranking.html" with itens=painel.modelos %}
+    </article>
+    <article class="card p-5" aria-labelledby="titulo-montadoras">
+      <h3 id="titulo-montadoras" class="{% classe 'card-titulo' %}">Montadoras líderes</h3>
+      <p class="{% classe 'card-descricao' %} mb-5">Participação de cada marca na frota.</p>
+      {% include "partials/ranking.html" with itens=painel.montadoras %}
+    </article>
+    <article class="card p-5" aria-labelledby="titulo-cidades-painel">
+      <h3 id="titulo-cidades-painel" class="{% classe 'card-titulo' %}">Cidades com mais veículos</h3>
+      <p class="{% classe 'card-descricao' %} mb-5">Onde a demanda por recarga está concentrada.</p>
+      {% include "partials/ranking.html" with itens=painel.cidades %}
+    </article>
+  </div>
+
+  {# ---------- Adoção por habitante × renda ---------- #}
+  <div class="mt-3 grid gap-3 lg:grid-cols-3">
+    <article class="card p-5 lg:col-span-2" aria-labelledby="titulo-renda">
+      <h3 id="titulo-renda" class="{% classe 'card-titulo' %}">Adoção por habitante × renda do condado</h3>
+      <p class="{% classe 'card-descricao' %}">Cada ponto é um condado: renda mediana domiciliar (Census SAIPE 2024) e veículos elétricos por mil habitantes (população 2025). A linha é a regressão linear.</p>
+      <div data-grafico="adocao" class="mt-4 h-80" role="img" aria-label="Gráfico de dispersão da renda mediana contra veículos por mil habitantes, por condado. Os valores estão na tabela abaixo."></div>
+      <details class="mt-3">
+        <summary class="{% classe 'ver-dados' %}">Ver dados</summary>
+        <div class="mt-2 max-h-64 overflow-auto">
+          <table class="{% classe 'tabela' %}">
+            <thead><tr><th scope="col">Condado</th><th scope="col">Renda mediana (US$)</th><th scope="col">Por mil hab.</th><th scope="col">Veículos</th><th scope="col">População</th></tr></thead>
+            <tbody>{% for ponto in adocao.pontos %}<tr><th scope="row">{{ ponto.condado }}</th><td>{{ ponto.renda|floatformat:"0g" }}</td><td>{{ ponto.por_mil|floatformat:1 }}</td><td>{{ ponto.veiculos|floatformat:"0g" }}</td><td>{{ ponto.populacao|floatformat:"0g" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+    </article>
+
+    <article class="card p-5" aria-labelledby="titulo-correlacao">
+      <h3 id="titulo-correlacao" class="{% classe 'card-titulo' %}">A renda explica a adoção?</h3>
+      {% if adocao.spearman is not None %}
+      <dl class="mt-4 grid grid-cols-2 gap-2">
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Spearman (ρ)</dt>
+          <dd class="mt-0.5 text-2xl font-semibold tracking-tight">{{ adocao.spearman|floatformat:2 }}</dd>
+          <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ adocao.p_spearman|valor_p }}</dd>
+        </div>
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pearson (r)</dt>
+          <dd class="mt-0.5 text-2xl font-semibold tracking-tight">{{ adocao.pearson|floatformat:2 }}</dd>
+          <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ adocao.p_pearson|valor_p }}</dd>
+        </div>
+      </dl>
+      <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
+        Correlação {% if adocao.spearman >= 0.7 %}forte{% elif adocao.spearman >= 0.4 %}moderada{% else %}fraca{% endif %} e positiva entre renda e adoção nos {{ adocao.n }} condados.
+        Pela regressão, cada US$ 1 mil a mais de renda mediana acompanha {{ adocao.inclinacao|floatformat:2 }} veículo a mais por mil habitantes (R² = {{ adocao.r2|floatformat:2 }}).
+      </p>
+      {% if adocao_atual %}
+      <p class="mt-3 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">{{ condado }}: renda de US$ {{ adocao_atual.renda|floatformat:"0g" }} e {{ adocao_atual.por_mil|floatformat:1 }} veículos por mil habitantes (estado: {{ adocao.por_mil_estado|floatformat:1 }}).</p>
+      {% endif %}
+      <p class="{% classe 'aviso' %} mt-4">{% icone "alerta" "mt-0.5 size-3.5 shrink-0" %}<span>Correlação não é causa: renda anda junto com densidade urbana, escolaridade e oferta de recarga. É uma análise ecológica (por condado), não por pessoa.</span></p>
+      {% else %}
+      <p class="{% classe 'vazio' %} mt-6">Rode <code>python manage.py importar_fontes</code> para ver a análise.</p>
+      {% endif %}
+    </article>
+  </div>
+
+  {# ---------- Recarga pública ---------- #}
+  <div class="mt-3 grid gap-3 lg:grid-cols-3">
+    <article class="card p-5" aria-labelledby="titulo-recarga">
+      <h3 id="titulo-recarga" class="{% classe 'card-titulo' %}">Recarga pública {% if condado %}em {{ condado }}{% else %}no estado{% endif %}</h3>
+      <p class="{% classe 'card-descricao' %}">Estações abertas ao público e em funcionamento (NREL/AFDC).</p>
+      {% if recarga_atual %}
+      <dl class="mt-4 grid grid-cols-2 gap-2">
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Estações</dt>
+          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.estacoes|floatformat:"0g" }}</dd>
+        </div>
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pontos (todos)</dt>
+          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.pontos|floatformat:"0g" }}</dd>
+        </div>
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pontos rápidos (DC)</dt>
+          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.rapidos|floatformat:"0g" }}</dd>
+        </div>
+        <div class="{% classe 'estatistica' %}">
+          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">BEV por ponto rápido</dt>
+          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{% if recarga_atual.bev_por_rapido %}{{ recarga_atual.bev_por_rapido|floatformat:1 }}{% else %}–{% endif %}</dd>
+        </div>
+      </dl>
+      {% endif %}
+      {% if recarga.sem_ponto %}
+      <p class="{% classe 'aviso' %} mt-4">{% icone "alerta" "mt-0.5 size-3.5 shrink-0" %}<span>Sem nenhum ponto público: {{ recarga.sem_ponto|join:", " }}.</span></p>
+      {% endif %}
+    </article>
+    <article class="card p-5 lg:col-span-2" aria-labelledby="titulo-piores">
+      <h3 id="titulo-piores" class="{% classe 'card-titulo' %}">Onde falta recarga</h3>
+      <p class="{% classe 'card-descricao' %} mb-5">Condados com mais veículos por ponto público (só os com pelo menos 500 veículos). É por aqui que começa a expansão da rede.</p>
+      {% include "partials/ranking.html" with itens=piores_recarga sufixo="veículos/ponto" %}
+    </article>
+  </div>
+
+  {# ---------- Autonomia e a lacuna de dados por trás dela ---------- #}
+  <div class="mt-3 grid gap-3 lg:grid-cols-2">
+    <article class="card p-5" aria-labelledby="titulo-autonomia">
+      <h3 id="titulo-autonomia" class="{% classe 'card-titulo' %}">Autonomia mediana dos BEV</h3>
+      <p class="{% classe 'card-descricao' %}">Em milhas, por ano-modelo. Só entram anos em que a maioria dos BEV tem a autonomia pesquisada{% if painel.lacuna %}, por isso a linha para em {{ painel.lacuna.ultimo_ano }}{% endif %}.</p>
+      {% if painel.autonomia %}
+      <div data-grafico="autonomia" class="mt-4 h-60" role="img" aria-label="Gráfico de linha da autonomia mediana dos BEV por ano-modelo. Os valores estão na tabela abaixo."></div>
+      {% if painel.lacuna %}
+      <p class="{% classe 'aviso' %} mt-3">{% icone "alerta" "mt-0.5 size-3.5 shrink-0" %}<span>De {{ painel.lacuna.primeiro_ano_sem }} em diante são {{ painel.lacuna.bev|floatformat:"0g" }} BEV e só {{ painel.lacuna.pct_com_dado|floatformat:1 }}% têm a autonomia pesquisada pelo DOL. Não dá para dizer se a autonomia subiu ou caiu nesses anos.</span></p>
+      {% endif %}
+      <details class="mt-3">
+        <summary class="{% classe 'ver-dados' %}">Ver dados</summary>
+        <div class="mt-2 max-h-64 overflow-auto">
+          <table class="{% classe 'tabela' %}">
+            <thead><tr><th scope="col">Ano-modelo</th><th scope="col">Mediana (mi)</th><th scope="col">Veículos com o dado</th></tr></thead>
+            <tbody>{% for linha in painel.autonomia %}<tr><th scope="row">{{ linha.ano }}</th><td>{{ linha.mediana }}</td><td>{{ linha.amostra|floatformat:"0g" }}</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+      {% else %}
+      <p class="{% classe 'vazio' %} mt-6">Nenhum ano tem autonomia pesquisada suficiente neste recorte.</p>
+      {% endif %}
+    </article>
+
+    <article class="card p-5" aria-labelledby="titulo-cobertura">
+      <h3 id="titulo-cobertura" class="{% classe 'card-titulo' %}">Cobertura do dado de autonomia</h3>
+      <p class="{% classe 'card-descricao' %}">% dos BEV de cada ano-modelo com a autonomia pesquisada pelo DOL.</p>
+      <div data-grafico="cobertura" class="mt-4 h-60" role="img" aria-label="Gráfico de colunas com a porcentagem de BEV com autonomia pesquisada, por ano-modelo. Os valores estão na tabela abaixo."></div>
+      <details class="mt-3">
+        <summary class="{% classe 'ver-dados' %}">Ver dados</summary>
+        <div class="mt-2 max-h-64 overflow-auto">
+          <table class="{% classe 'tabela' %}">
+            <thead><tr><th scope="col">Ano-modelo</th><th scope="col">BEV</th><th scope="col">Com autonomia</th><th scope="col">Cobertura</th></tr></thead>
+            <tbody>{% for linha in painel.cobertura %}<tr><th scope="row">{{ linha.ano }}</th><td>{{ linha.bev|floatformat:"0g" }}</td><td>{{ linha.com_dado|floatformat:"0g" }}</td><td>{{ linha.pct|floatformat:1 }}%</td></tr>{% endfor %}</tbody>
+          </table>
+        </div>
+      </details>
+    </article>
+  </div>
+
+  {# ---------- Tabela por condado ---------- #}
+  <article class="card mt-3 overflow-hidden" aria-labelledby="titulo-tabela">
+    <div class="p-5">
+      <h3 id="titulo-tabela" class="{% classe 'card-titulo' %}">O carro mais registrado em cada condado</h3>
+      <p class="{% classe 'card-descricao' %}">Clique num condado para filtrar o painel.</p>
+    </div>
+    <div class="max-h-[32rem] overflow-auto border-t border-zinc-200/80 dark:border-zinc-800">
+      <table class="{% classe 'tabela' %} [&_td:first-child]:pl-5 [&_th:first-child]:pl-5">
+        <thead>
+          <tr>
+            <th scope="col">Condado</th>
+            <th scope="col">Veículos</th>
+            <th scope="col">Por mil hab.</th>
+            <th scope="col">Veíc./ponto</th>
+            <th scope="col">% BEV</th>
+            <th scope="col">Modelo líder</th>
+            <th scope="col">Fatia do líder</th>
+            <th scope="col">2º modelo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linha in tabela_condados %}
+          <tr{% if linha.condado == condado %} aria-current="true"{% endif %}>
+            <th scope="row">
+              <a href="?condado={{ linha.condado|urlencode }}#painel" hx-get="?condado={{ linha.condado|urlencode }}" hx-target="#painel" hx-swap="outerHTML" hx-push-url="true" hx-indicator="#painel" class="focus-ring rounded font-medium hover:underline">{{ linha.condado }}</a>
+            </th>
+            <td>{{ linha.total|floatformat:"0g" }}</td>
+            <td>{% if linha.por_mil is not None %}{{ linha.por_mil|floatformat:1 }}{% else %}–{% endif %}</td>
+            <td>{% if linha.por_ponto %}{{ linha.por_ponto|floatformat:1 }}{% else %}sem ponto{% endif %}</td>
+            <td>{{ linha.pct_bev|floatformat:0 }}%</td>
+            <td class="font-medium text-zinc-900 dark:text-zinc-50">{{ linha.lider }}</td>
+            <td>{{ linha.lider_pct|floatformat:1 }}%</td>
+            <td>{% if linha.segundo %}{{ linha.segundo }} <span class="text-zinc-400 dark:text-zinc-500">({{ linha.segundo_pct|floatformat:1 }}%)</span>{% else %}–{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>

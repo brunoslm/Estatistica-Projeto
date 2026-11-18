@@ -1,0 +1,27 @@
+{% load static %}<!doctype html>
+<html lang="pt-br" class="scroll-pt-24 antialiased">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config" content='{"includeIndicatorStyles":false,"allowEval":false,"allowScriptTags":false,"selfRequestsOnly":true}'>
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
+  <title>{% block titulo %}Início{% endblock %} | Carros em Washington</title>
+  {# Sem defer: define o tema antes da primeira pintura (a CSP não permite script inline). #}
+  <script src="{% static 'js/tema.js' %}"></script>
+  <link rel="icon" href="{% static 'icone.svg' %}" type="image/svg+xml">
+  <link rel="preload" href="{% static 'fonts/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script defer src="{% static 'vendor/htmx.min.js' %}"></script>
+  {% block scripts %}{% endblock %}
+  {# Ordem importa: app.js registra os componentes no evento alpine:init, que o Alpine dispara ao carregar. #}
+  <script defer src="{% static 'js/app.js' %}"></script>
+  <script defer src="{% static 'vendor/alpine-csp.min.js' %}"></script>
+</head>
+<body class="flex min-h-dvh flex-col bg-white font-sans text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <a href="#conteudo" class="btn btn-primary sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100]">Pular para o conteúdo</a>
+  {% include "partials/navbar.html" %}
+  <main id="conteudo" class="flex-1">{% block conteudo %}{% endblock %}</main>
+  {% include "partials/rodape.html" %}
+</body>
+</html>

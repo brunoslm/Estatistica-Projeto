@@ -1,0 +1,36 @@
+{% load interface %}
+<div class="flex items-start justify-between gap-3">
+  <div class="min-w-0">
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20">
+      <span class="size-1.5 rounded-full bg-red-500" aria-hidden="true"></span>
+      Condado de {{ cidade.condado }}
+    </span>
+    <h2 class="mt-3 text-xl font-semibold tracking-tight text-balance">{{ cidade.nome }}</h2>
+  </div>
+  <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{% icone "carro" "size-5" %}</span>
+</div>
+
+<dl class="mt-4 grid grid-cols-3 gap-2">
+  <div class="rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/60">
+    <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Veículos</dt>
+    <dd class="mt-0.5 font-semibold tracking-tight">{{ dados.total|floatformat:"0g" }}</dd>
+  </div>
+  <div class="rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/60">
+    <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">BEV</dt>
+    <dd class="mt-0.5 font-semibold tracking-tight">{{ dados.pct_bev|floatformat:0 }}%</dd>
+  </div>
+  <div class="rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/60">
+    <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Autonomia</dt>
+    <dd class="mt-0.5 font-semibold tracking-tight">{% if dados.mediana_autonomia_bev %}{{ dados.mediana_autonomia_bev }} mi{% else %}–{% endif %}</dd>
+  </div>
+</dl>
+
+<h3 class="mt-5 mb-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">Modelos mais registrados</h3>
+{% include "partials/ranking.html" with itens=dados.modelos %}
+
+{% if not pagina_completa %}
+<a href="{{ cidade.get_absolute_url }}" class="focus-ring group mt-5 inline-flex items-center gap-1 rounded-md text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
+  Abrir página da cidade
+  {% icone "seta-direita" "size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" %}
+</a>
+{% endif %}

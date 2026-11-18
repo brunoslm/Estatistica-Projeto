@@ -1,0 +1,14 @@
+{% load interface %}
+{# Claro / Escuro. Sem escolha salva, o site segue o aparelho; a opção marcada mostra o tema em uso. #}
+{# O radio cobre a opção inteira (invisível): com sr-only, o foco dentro da navbar fixa rolava a página para o topo. #}
+<fieldset x-data="seletorTema" class="inline-flex items-center gap-0.5 rounded-full bg-zinc-100 p-1 dark:bg-zinc-800">
+  <legend class="sr-only">Tema</legend>
+  <label title="Claro" class="tema-opcao">
+    <input type="radio" name="{{ nome }}" value="claro" :checked="ehClaro" @change="escolher" class="absolute inset-0 size-full cursor-pointer appearance-none rounded-full opacity-0">
+    {% icone "sol" "size-4" %}<span class="sr-only">Claro</span>
+  </label>
+  <label title="Escuro" class="tema-opcao">
+    <input type="radio" name="{{ nome }}" value="escuro" :checked="ehEscuro" @change="escolher" class="absolute inset-0 size-full cursor-pointer appearance-none rounded-full opacity-0">
+    {% icone "lua" "size-4" %}<span class="sr-only">Escuro</span>
+  </label>
+</fieldset>

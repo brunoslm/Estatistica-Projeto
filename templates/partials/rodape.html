@@ -1,0 +1,20 @@
+{% load interface %}
+<footer class="mt-24 border-t border-zinc-200/80 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40">
+  <div class="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+    <div>
+      <p class="flex items-center gap-2 text-sm font-semibold tracking-tight">
+        <span class="size-1.5 rounded-full bg-red-500" aria-hidden="true"></span>
+        Carros em Washington
+      </p>
+      <p class="mt-1.5 max-w-md text-sm leading-6 text-pretty text-zinc-500 dark:text-zinc-400">
+        Projeto de estatística. Mapa feito com d3 e us-atlas (limites do U.S. Census Bureau), tudo servido localmente.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="#conteudo" class="focus-ring group inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
+        {% icone "seta-cima" "size-4 transition-transform duration-200 ease-out group-hover:-translate-y-0.5" %}
+        Voltar ao topo
+      </a>
+    </div>
+  </div>
+</footer>
