@@ -58,10 +58,10 @@ CLASSES = {
     "[&_thead_th]:text-zinc-500 dark:[&_thead_th]:bg-zinc-800 dark:[&_thead_th]:text-zinc-400 "
     "[&_tbody_tr]:border-t [&_tbody_tr]:border-zinc-100 dark:[&_tbody_tr]:border-zinc-800 "
     "[&_tr[aria-current=true]]:bg-red-50/70 dark:[&_tr[aria-current=true]]:bg-red-500/10",
-    "aviso": "flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900 ring-1 "
-    "ring-amber-600/20 ring-inset dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-400/20",
-    "selo-alerta": "inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium "
-    "text-amber-800 ring-1 ring-amber-600/20 ring-inset dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20",
+    "aviso": "flex items-start gap-2 rounded-xl bg-red-50 px-3 py-2.5 text-xs leading-5 text-red-700 ring-1 "
+    "ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20",
+    "selo-alerta": "inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium "
+    "text-red-700 ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20",
     "vazio": "rounded-xl border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 "
     "dark:border-zinc-700 dark:text-zinc-400",
     "legenda": "flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300",

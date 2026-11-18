@@ -29,6 +29,33 @@
     </a>
   </header>
 
+  <section aria-labelledby="titulo-como-usar" class="mt-10">
+    <p class="{% classe 'secao-rotulo' %}"><span class="size-1.5 rounded-full bg-red-500" aria-hidden="true"></span>Como usar</p>
+    <h2 id="titulo-como-usar" class="{% classe 'secao-titulo' %}">Do mapa aos números em quatro cliques</h2>
+    <ol class="mt-6 grid gap-4 lg:grid-cols-4">
+      <li class="card p-5">
+        <span class="grid size-10 place-items-center rounded-full bg-red-50 text-base font-semibold text-red-600 tabular-nums ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20">1</span>
+        <h3 class="mt-4 {% classe 'card-titulo' %}">Aproxime Washington</h3>
+        <p class="mt-1 text-sm leading-6 text-pretty text-zinc-500 dark:text-zinc-400">No mapa dos EUA, clique no estado em vermelho para ver os condados.</p>
+      </li>
+      <li class="card p-5">
+        <span class="grid size-10 place-items-center rounded-full bg-red-50 text-base font-semibold text-red-600 tabular-nums ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20">2</span>
+        <h3 class="mt-4 {% classe 'card-titulo' %}">Escolha um condado</h3>
+        <p class="mt-1 text-sm leading-6 text-pretty text-zinc-500 dark:text-zinc-400">Clique num condado para filtrar o painel. Troque entre Total e Por mil hab. para recolorir o mapa.</p>
+      </li>
+      <li class="card p-5">
+        <span class="grid size-10 place-items-center rounded-full bg-red-50 text-base font-semibold text-red-600 tabular-nums ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20">3</span>
+        <h3 class="mt-4 {% classe 'card-titulo' %}">Abra uma cidade</h3>
+        <p class="mt-1 text-sm leading-6 text-pretty text-zinc-500 dark:text-zinc-400">Clique num ponto do mapa ou na lista ao lado para ver os detalhes da cidade.</p>
+      </li>
+      <li class="card p-5">
+        <span class="grid size-10 place-items-center rounded-full bg-red-50 text-base font-semibold text-red-600 tabular-nums ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20">4</span>
+        <h3 class="mt-4 {% classe 'card-titulo' %}">Leia o painel</h3>
+        <p class="mt-1 text-sm leading-6 text-pretty text-zinc-500 dark:text-zinc-400">Mais abaixo ficam os gráficos, os testes estatísticos e a leitura do condado escolhido.</p>
+      </li>
+    </ol>
+  </section>
+
   <div class="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
     <section aria-labelledby="titulo-mapa" data-mapa data-estado="eua" data-atlas="{% static 'dados/counties-albers-10m.json' %}" class="group card overflow-hidden">
       <div class="flex h-14 items-center justify-between gap-3 border-b border-zinc-200/80 px-4 dark:border-zinc-800">

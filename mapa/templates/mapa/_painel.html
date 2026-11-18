@@ -207,12 +207,11 @@
       </dl>
       <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
         Correlação {% if adocao.spearman >= 0.7 %}forte{% elif adocao.spearman >= 0.4 %}moderada{% else %}fraca{% endif %} e positiva entre renda e adoção nos {{ adocao.n }} condados.
-        Pela regressão, cada US$ 1 mil a mais de renda mediana acompanha {{ adocao.inclinacao|floatformat:2 }} veículo a mais por mil habitantes (R² = {{ adocao.r2|floatformat:2 }}).
+        Pela regressão, cada US$ 1 mil a mais de renda mediana acompanha {{ adocao.inclinacao|floatformat:2 }} veículo a mais por mil habitantes.
       </p>
       {% if adocao_atual %}
       <p class="mt-3 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">{{ condado }}: renda de US$ {{ adocao_atual.renda|floatformat:"0g" }} e {{ adocao_atual.por_mil|floatformat:1 }} veículos por mil habitantes (estado: {{ adocao.por_mil_estado|floatformat:1 }}).</p>
       {% endif %}
-      <p class="{% classe 'aviso' %} mt-4">{% icone "alerta" "mt-0.5 size-3.5 shrink-0" %}<span>Correlação não é causa: renda anda junto com densidade urbana, escolaridade e oferta de recarga. É uma análise ecológica (por condado), não por pessoa.</span></p>
       {% else %}
       <p class="{% classe 'vazio' %} mt-6">Rode <code>python manage.py importar_fontes</code> para ver a análise.</p>
       {% endif %}
