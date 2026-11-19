@@ -34,4 +34,58 @@ document.addEventListener("alpine:init", () => {
       if (querEscuro !== window.tema.escuroAtivo()) window.tema.alternar();
     },
   }));
+  // Carrossel de cartões com bolinhas. O trilho rola com scroll-snap (arrastar no celular funciona sozinho);
+  // bolinhas e setas só mandam rolar. Os cartões fora de vista ficam inert (fora do Tab e do leitor de tela).
+  Alpine.data("carrossel", () => {
+    let trilho, cartoes, pontos, legenda, botaoAnterior, botaoProximo, quadro;
+    const reduzirMovimento = window.matchMedia("(prefers-reduced-motion: reduce)");
+    return {
+      atual: 0,
+      init() {
+        trilho = this.$refs.trilho;
+        cartoes = Array.from(trilho.children);
+        pontos = Array.from(this.$el.querySelectorAll("[data-ponto]"));
+        legenda = this.$el.querySelector("[data-carrossel-legenda]");
+        botaoAnterior = this.$el.querySelector("[data-anterior]");
+        botaoProximo = this.$el.querySelector("[data-proximo]");
+        trilho.addEventListener(
+          "scroll",
+          () => {
+            cancelAnimationFrame(quadro);
+            quadro = requestAnimationFrame(() => this.sincronizar());
+          },
+          { passive: true },
+        );
+        this.marcar();
+      },
+      sincronizar() {
+        const indice = Math.round(trilho.scrollLeft / Math.max(trilho.clientWidth, 1));
+        if (indice !== this.atual) {
+          this.atual = indice;
+          this.marcar();
+        }
+      },
+      marcar() {
+        pontos.forEach((ponto, indice) => ponto.setAttribute("aria-current", String(indice === this.atual)));
+        cartoes.forEach((cartao, indice) => (cartao.inert = indice !== this.atual));
+        if (legenda) legenda.textContent = `${this.atual + 1}/${cartoes.length} · ${pontos[this.atual].dataset.rotulo}`;
+        if (botaoAnterior) botaoAnterior.disabled = this.atual === 0;
+        if (botaoProximo) botaoProximo.disabled = this.atual === cartoes.length - 1;
+      },
+      mostrar(indice) {
+        this.atual = Math.min(Math.max(indice, 0), cartoes.length - 1);
+        trilho.scrollTo({ left: this.atual * trilho.clientWidth, behavior: reduzirMovimento.matches ? "auto" : "smooth" });
+        this.marcar();
+      },
+      irPara(evento) {
+        this.mostrar(Number(evento.currentTarget.dataset.ponto));
+      },
+      anterior() {
+        this.mostrar(this.atual - 1);
+      },
+      proximo() {
+        this.mostrar(this.atual + 1);
+      },
+    };
+  });
 });

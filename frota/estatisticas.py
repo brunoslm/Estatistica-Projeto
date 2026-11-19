@@ -399,8 +399,8 @@ def efeito_fim_do_credito(serie):
     total = {linha["mes"]: linha["bev"] + linha["phev"] for linha in serie}
     inicio = f"{FIM_CREDITO_FEDERAL:%Y-%m}"
     depois = [mes for mes in total if mes >= inicio]
-    pares = [(total[mes], total.get(f"{int(mes[:4]) - 1}{mes[4:]}")) for mes in depois]
-    pares = [(atual, anterior) for atual, anterior in pares if anterior is not None]
+    meses = [mes for mes in depois if f"{int(mes[:4]) - 1}{mes[4:]}" in total]
+    pares = [(total[mes], total[f"{int(mes[:4]) - 1}{mes[4:]}"]) for mes in meses]
     if len(pares) < 3:
         return None
     atuais = [atual for atual, _ in pares]
@@ -408,12 +408,14 @@ def efeito_fim_do_credito(serie):
     soma_atual, soma_anterior = sum(atuais), sum(anteriores)
 
     p_t = p_wilcoxon = None
+    calculo = None
     if soma_anterior and any(a != b for a, b in pares):
         p_t = float(stats.ttest_rel(atuais, anteriores).pvalue)
         try:
             p_wilcoxon = float(stats.wilcoxon(atuais, anteriores).pvalue)
         except ValueError:
             p_wilcoxon = None
+        calculo = conta_do_teste_pareado(meses, atuais, anteriores)
 
     corrida_atual = sum(total.get(f"2025-{mes:02d}", 0) for mes in (7, 8, 9))
     corrida_anterior = sum(total.get(f"2024-{mes:02d}", 0) for mes in (7, 8, 9))
@@ -433,6 +435,57 @@ def efeito_fim_do_credito(serie):
         "corrida_pct": percentual(corrida_atual - corrida_anterior, corrida_anterior) if corrida_anterior else None,
         "mes_pico": nome_do_mes(pico) if pico else None,
         "vendas_pico": total.get(pico) if pico else None,
+        "calculo": calculo,
+    }
+
+
+def conta_do_teste_pareado(meses, atuais, anteriores):
+    """
+    As contas do teste t pareado e do Wilcoxon, passo a passo, para mostrar no painel.
+    d = vendas do mês − vendas do mesmo mês um ano antes.
+    """
+    diferencas = [atual - anterior for atual, anterior in zip(atuais, anteriores)]
+    n = len(diferencas)
+    media = sum(diferencas) / n
+    desvio = (sum((d - media) ** 2 for d in diferencas) / (n - 1)) ** 0.5  # desvio-padrão amostral (n − 1)
+    erro_padrao = desvio / n**0.5
+    graus = n - 1
+    t = media / erro_padrao if erro_padrao else None
+    t_critico = float(stats.t.ppf(0.975, graus))
+
+    # Wilcoxon: ordena |d| (sem os zeros), dá postos (empate = posto médio) e soma os postos de cada sinal.
+    nao_nulas = [d for d in diferencas if d]
+    postos = stats.rankdata([abs(d) for d in nao_nulas])
+    soma_positivos = float(sum(posto for posto, d in zip(postos, nao_nulas) if d > 0))
+    soma_negativos = float(sum(posto for posto, d in zip(postos, nao_nulas) if d < 0))
+    posto_de = dict(zip(range(len(nao_nulas)), postos))
+    linhas, indice = [], 0
+    for mes, atual, anterior, d in zip(meses, atuais, anteriores, diferencas):
+        posto = None
+        if d:
+            posto = float(posto_de[indice])
+            indice += 1
+        linhas.append(
+            {"mes": nome_do_mes(mes), "atual": atual, "anterior": anterior, "diferenca": d, "posto": posto}
+        )
+
+    return {
+        "linhas": linhas,
+        "n": n,
+        "soma_diferencas": sum(diferencas),
+        "media": media,
+        "desvio": desvio,
+        "erro_padrao": erro_padrao,
+        "graus": graus,
+        "t": t,
+        "t_critico": t_critico,
+        "ic_inferior": media - t_critico * erro_padrao,
+        "ic_superior": media + t_critico * erro_padrao,
+        "n_wilcoxon": len(nao_nulas),
+        "w_positivos": soma_positivos,
+        "w_negativos": soma_negativos,
+        "w": min(soma_positivos, soma_negativos),
+        "w_esperado": len(nao_nulas) * (len(nao_nulas) + 1) / 4,  # média de W⁺ se não houvesse efeito
     }
 
 
@@ -463,6 +516,7 @@ def calcular_adocao_e_renda():
     spearman = stats.spearmanr(rendas, adocao)
     pearson = stats.pearsonr(rendas, adocao)
     regressao = stats.linregress(rendas, adocao)
+    calculo = conta_da_correlacao(rendas, adocao)
     return {
         "pontos": sorted(pontos, key=lambda ponto: -ponto["por_mil"]),
         "n": len(validos),
@@ -473,9 +527,52 @@ def calcular_adocao_e_renda():
         "inclinacao": round(float(regressao.slope), 2),  # veículos por mil hab. a cada US$ 1 mil de renda
         "intercepto": round(float(regressao.intercept), 2),
         "r2": round(float(regressao.rvalue) ** 2, 2),
+        "calculo": calculo,
         "por_mil_estado": round(1000 * sum(veiculos.values()) / sum(p["populacao"] for p in pontos), 1)
         if pontos
         else None,
+    }
+
+
+def conta_da_correlacao(x, y):
+    """
+    As contas de Pearson, Spearman e da regressão linear, passo a passo, para mostrar no painel.
+    x = renda mediana (US$ mil), y = veículos por mil habitantes; um ponto por condado.
+    """
+    n = len(x)
+    media_x, media_y = sum(x) / n, sum(y) / n
+    sxx = sum((xi - media_x) ** 2 for xi in x)
+    syy = sum((yi - media_y) ** 2 for yi in y)
+    sxy = sum((xi - media_x) * (yi - media_y) for xi, yi in zip(x, y))
+    r = sxy / (sxx * syy) ** 0.5
+    t_r = r * ((n - 2) / (1 - r**2)) ** 0.5
+    inclinacao = sxy / sxx
+    intercepto = media_y - inclinacao * media_x
+
+    postos_x, postos_y = stats.rankdata(x), stats.rankdata(y)  # empate = posto médio
+    soma_d2 = float(sum((px - py) ** 2 for px, py in zip(postos_x, postos_y)))
+    rho_formula = 1 - 6 * soma_d2 / (n * (n**2 - 1))
+    rho = float(stats.spearmanr(x, y).statistic)  # Pearson aplicado aos postos (exato mesmo com empates)
+    t_rho = rho * ((n - 2) / (1 - rho**2)) ** 0.5
+    return {
+        "n": n,
+        "graus": n - 2,
+        "media_x": media_x,
+        "media_y": media_y,
+        "sxx": sxx,
+        "syy": syy,
+        "sxy": sxy,
+        "r": r,
+        "r2": r**2,
+        "t_r": t_r,
+        "inclinacao": inclinacao,
+        "intercepto": intercepto,
+        "soma_d2": soma_d2,
+        "n_cubo": n * (n**2 - 1),
+        "rho_formula": rho_formula,
+        "rho": rho,
+        "t_rho": t_rho,
+        "tem_empates": len(set(x)) < n or len(set(y)) < n,
     }
 
 
@@ -527,6 +624,7 @@ def calcular_recarga():
             "pontos": total_pontos,
             "rapidos": total_rapidos,
             "por_ponto": round(total_veiculos / total_pontos, 1) if total_pontos else None,
+            "bev": total_bev,
             "bev_por_rapido": round(total_bev / total_rapidos, 1) if total_rapidos else None,
         },
         "piores": sorted(grandes, key=lambda linha: -linha["por_ponto"])[:TOP_N],

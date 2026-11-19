@@ -1,0 +1,16 @@
+{% load interface %}
+<div class="mt-4 flex items-center justify-between gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+  <p data-carrossel-legenda aria-live="polite" class="min-w-0 truncate text-xs text-zinc-500 tabular-nums dark:text-zinc-400">1/{{ rotulos|length }} · {{ rotulos.0 }}</p>
+  <div class="flex shrink-0 items-center">
+    <button type="button" data-anterior @click="anterior" aria-label="Cartão anterior" class="focus-ring grid size-7 cursor-pointer place-items-center rounded-full text-zinc-500 transition duration-150 hover:bg-zinc-100 hover:text-zinc-900 disabled:pointer-events-none disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50">{% icone "seta-esquerda" "size-4" %}</button>
+    <div role="group" aria-label="Escolher cartão" class="flex items-center">
+      {% for rotulo in rotulos %}
+      <button type="button" data-ponto="{{ forloop.counter0 }}" data-rotulo="{{ rotulo }}" @click="irPara" aria-label="{{ forloop.counter }}. {{ rotulo }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
+              class="group focus-ring grid h-7 w-6 cursor-pointer place-items-center rounded-full">
+        <span class="h-2 w-2 rounded-full bg-zinc-300 transition-all duration-300 ease-spring group-hover:bg-zinc-400 group-aria-[current=true]:w-5 group-aria-[current=true]:bg-red-600 dark:bg-zinc-600 dark:group-hover:bg-zinc-500 dark:group-aria-[current=true]:bg-red-400" aria-hidden="true"></span>
+      </button>
+      {% endfor %}
+    </div>
+    <button type="button" data-proximo @click="proximo" aria-label="Próximo cartão" class="focus-ring grid size-7 cursor-pointer place-items-center rounded-full text-zinc-500 transition duration-150 hover:bg-zinc-100 hover:text-zinc-900 disabled:pointer-events-none disabled:opacity-30 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50">{% icone "seta-direita" "size-4" %}</button>
+  </div>
+</div>

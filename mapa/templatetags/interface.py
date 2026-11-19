@@ -66,6 +66,14 @@ CLASSES = {
     "dark:border-zinc-700 dark:text-zinc-400",
     "legenda": "flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300",
     "estatistica": "rounded-xl bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800/60",
+    # Carrossel das contas estatísticas
+    "trilho": "flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] "
+    "[&::-webkit-scrollbar]:hidden",
+    "cartao": "w-full shrink-0 snap-start snap-always",
+    "passo-rotulo": "text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400",
+    "passo": "text-xs leading-5 text-pretty text-zinc-600 dark:text-zinc-300",
+    "formula": "mt-1 overflow-x-auto rounded-lg bg-zinc-50 px-3 py-2 font-mono text-xs leading-6 whitespace-nowrap "
+    "text-zinc-800 tabular-nums dark:bg-zinc-800/60 dark:text-zinc-200",
 }
 
 
@@ -83,3 +91,32 @@ def valor_p(valor):
     if valor < 0.001:
         return "p < 0,001"
     return f"p = {valor:.3f}".replace(".", ",")
+
+
+@register.filter
+def num(valor, casas=2):
+    """Número no formato brasileiro com sinal de menos tipográfico: -1917.04 -> '−1.917,04'."""
+    if valor is None:
+        return "–"
+    casas = int(casas)
+    texto = f"{abs(valor):,.{casas}f}".replace(",", "@").replace(".", ",").replace("@", ".")
+    negativo = valor < 0 and round(abs(valor), casas) != 0
+    return f"−{texto}" if negativo else texto
+
+
+@register.inclusion_tag("partials/carrossel_controles.html")
+def controles_carrossel(rotulos):
+    """Legenda + setas + bolinhas do carrossel: {% controles_carrossel "Resultado|Teste t|Wilcoxon" %}."""
+    return {"rotulos": rotulos.split("|")}
+
+
+@register.filter
+def porcento(valor):
+    """0.51 -> '51%'."""
+    return f"{round(100 * valor)}%" if valor is not None else "–"
+
+
+@register.filter
+def razao(valor, base):
+    """Quantas vezes valor é a base, com uma casa: 62.0 / 32.3 -> '1,9'."""
+    return num(valor / base, 1) if valor and base else "–"

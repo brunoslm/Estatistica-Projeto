@@ -51,7 +51,7 @@
       <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div>
           <h3 id="titulo-vendas" class="{% classe 'card-titulo' %}">Carros elétricos novos vendidos por mês</h3>
-          <p class="{% classe 'card-descricao' %}">Primeiro título de veículo novo no DOL. O mês mais recente fica de fora: ainda está sendo registrado.</p>
+          <p class="{% classe 'card-descricao' %}">Primeiro título de veículo novo no DOL, até o último mês do arquivo.</p>
         </div>
         <ul class="{% classe 'legenda' %}" aria-label="Legenda">
           <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-serie-1" aria-hidden="true"></span>BEV</li>
@@ -70,26 +70,86 @@
       </details>
     </article>
 
-    <article class="card p-5" aria-labelledby="titulo-credito">
+    <article class="card min-w-0 p-5" aria-labelledby="titulo-credito">
       <h3 id="titulo-credito" class="{% classe 'card-titulo' %}">Depois do fim do crédito federal</h3>
       <p class="{% classe 'card-descricao' %}">O crédito de US$ 7.500 acabou para compras depois de 30/09/2025. Cada mês é comparado com o mesmo mês do ano anterior.</p>
       {% if efeito and efeito.variacao_pct is not None %}
-      <p class="mt-5 text-5xl font-semibold tracking-tight">{% if efeito.variacao_pct > 0 %}+{% endif %}{{ efeito.variacao_pct|floatformat:1 }}%</p>
-      <p class="{% classe 'kpi-nota' %}">{{ efeito.depois|floatformat:"0g" }} vendas de {{ efeito.periodo }}, contra {{ efeito.antes|floatformat:"0g" }} de {{ efeito.periodo_anterior }}.</p>
-      <dl class="mt-5 grid grid-cols-2 gap-2">
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Teste t pareado</dt>
-          <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_t|valor_p }}</dd>
+      {% with c=efeito.calculo %}
+      <div x-data="carrossel" role="region" aria-roledescription="carrossel" aria-label="Contas do teste do crédito federal" class="mt-4">
+        <div x-ref="trilho" class="{% classe 'trilho' %}">
+          {# 1. Resultado #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Resultado">
+            <p class="text-5xl font-semibold tracking-tight">{% if efeito.variacao_pct > 0 %}+{% endif %}{{ efeito.variacao_pct|floatformat:1 }}%</p>
+            <p class="{% classe 'kpi-nota' %}">{{ efeito.depois|floatformat:"0g" }} vendas de {{ efeito.periodo }}, contra {{ efeito.antes|floatformat:"0g" }} de {{ efeito.periodo_anterior }}.</p>
+            <dl class="mt-5 grid grid-cols-2 gap-2">
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Teste t pareado</dt>
+                <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_t|valor_p }}</dd>
+              </div>
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Wilcoxon</dt>
+                <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_wilcoxon|valor_p }}</dd>
+              </div>
+            </dl>
+            <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
+              {% if efeito.significativo %}A queda é estatisticamente significativa ({{ efeito.meses }} meses pareados, α = 5%).{% else %}Com {{ efeito.meses }} meses pareados, a diferença ainda não é significativa neste recorte (α = 5%).{% endif %}
+              {% if efeito.corrida_pct is not None %}Jul a set/2025, antes do prazo: {% if efeito.corrida_pct > 0 %}+{% endif %}{{ efeito.corrida_pct|floatformat:1 }}% contra 2024.{% endif %}
+            </p>
+          </div>
+
+          {% if c %}
+          {# 2. Os pares #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Os pares">
+            <p class="{% classe 'passo-rotulo' %}">Hipóteses</p>
+            <p class="{% classe 'formula' %}">H₀: μ<sub>d</sub> = 0 &nbsp;·&nbsp; H₁: μ<sub>d</sub> ≠ 0</p>
+            <p class="{% classe 'passo' %} mt-3">Cada mês depois do fim do crédito vira um par com o mesmo mês do ano anterior (tira a sazonalidade). <var>d</var> = depois − antes.</p>
+            <div class="mt-2 max-h-52 overflow-auto">
+              <table class="{% classe 'tabela' %}">
+                <thead><tr><th scope="col">Mês</th><th scope="col">Depois</th><th scope="col">Antes</th><th scope="col"><var>d</var></th></tr></thead>
+                <tbody>{% for linha in c.linhas %}<tr><th scope="row">{{ linha.mes }}</th><td>{{ linha.atual|floatformat:"0g" }}</td><td>{{ linha.anterior|floatformat:"0g" }}</td><td>{{ linha.diferenca|num:0 }}</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+            <p class="{% classe 'formula' %} mt-2">variação = ({{ efeito.depois|num:0 }} − {{ efeito.antes|num:0 }}) / {{ efeito.antes|num:0 }} = {{ efeito.variacao_pct|num:1 }}%</p>
+          </div>
+
+          {# 3. Teste t pareado #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Teste t pareado">
+            <ol class="space-y-2.5">
+              <li><p class="{% classe 'passo' %}">Média das diferenças</p>
+                <p class="{% classe 'formula' %}">d̄ = Σd / n = {{ c.soma_diferencas|num:0 }} / {{ c.n }} = {{ c.media|num:1 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Desvio-padrão amostral das diferenças</p>
+                <p class="{% classe 'formula' %}">s<sub>d</sub> = √[Σ(d − d̄)² / (n − 1)] = {{ c.desvio|num:1 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Erro-padrão da média</p>
+                <p class="{% classe 'formula' %}">EP = s<sub>d</sub> / √n = {{ c.desvio|num:1 }} / √{{ c.n }} = {{ c.erro_padrao|num:1 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Estatística t com {{ c.graus }} graus de liberdade (n − 1)</p>
+                <p class="{% classe 'formula' %}">t = d̄ / EP = {{ c.media|num:1 }} / {{ c.erro_padrao|num:1 }} = <strong>{{ c.t|num:2 }}</strong></p></li>
+              <li><p class="{% classe 'passo' %}">Intervalo de 95% da queda média por mês (t<sub>0,975; {{ c.graus }}</sub> = {{ c.t_critico|num:3 }})</p>
+                <p class="{% classe 'formula' %}">d̄ ± t · EP = [{{ c.ic_inferior|num:0 }} ; {{ c.ic_superior|num:0 }}]</p></li>
+            </ol>
+            <p class="{% classe 'passo' %} mt-3">|t| = {{ c.t|num:2|cut:"−" }} {% if efeito.p_t < 0.05 %}&gt;{% else %}≤{% endif %} {{ c.t_critico|num:3 }}, {{ efeito.p_t|valor_p }}: {% if efeito.p_t < 0.05 %}rejeita H₀.{% if c.ic_superior < 0 %} O intervalo inteiro fica abaixo de zero.{% endif %}{% else %}não rejeita H₀.{% endif %}</p>
+          </div>
+
+          {# 4. Wilcoxon #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Wilcoxon">
+            <p class="{% classe 'passo' %}">Versão sem supor normalidade: ordena |<var>d</var>| do menor para o maior e dá postos (empate = posto médio). O sinal de <var>d</var> volta depois.</p>
+            <div class="mt-2 max-h-40 overflow-auto">
+              <table class="{% classe 'tabela' %}">
+                <thead><tr><th scope="col">Mês</th><th scope="col"><var>d</var></th><th scope="col">Posto de |<var>d</var>|</th></tr></thead>
+                <tbody>{% for linha in c.linhas %}<tr><th scope="row">{{ linha.mes }}</th><td>{{ linha.diferenca|num:0 }}</td><td>{% if linha.posto %}{% if linha.diferenca > 0 %}+{% else %}−{% endif %}{{ linha.posto|num:1 }}{% else %}fora (d = 0){% endif %}</td></tr>{% endfor %}</tbody>
+              </table>
+            </div>
+            <ol class="mt-2 space-y-2">
+              <li><p class="{% classe 'formula' %}">W⁺ = soma dos postos com d &gt; 0 = {{ c.w_positivos|num:1 }}</p></li>
+              <li><p class="{% classe 'formula' %}">W⁻ = soma dos postos com d &lt; 0 = {{ c.w_negativos|num:1 }}</p></li>
+              <li><p class="{% classe 'formula' %}">W = mín(W⁺, W⁻) = <strong>{{ c.w|num:1 }}</strong> (n = {{ c.n_wilcoxon }})</p></li>
+            </ol>
+            <p class="{% classe 'passo' %} mt-3">Sem efeito, W⁺ e W⁻ ficariam perto de n(n+1)/4 = {{ c.w_esperado|num:1 }}. {% if efeito.p_wilcoxon is not None and efeito.p_wilcoxon < 0.05 %}Aqui um lado ficou com quase tudo. {% endif %}Distribuição exata: {{ efeito.p_wilcoxon|valor_p }}.</p>
+          </div>
+          {% endif %}
         </div>
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Wilcoxon</dt>
-          <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_wilcoxon|valor_p }}</dd>
-        </div>
-      </dl>
-      <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
-        {% if efeito.significativo %}A queda é estatisticamente significativa ({{ efeito.meses }} meses pareados, α = 5%).{% else %}Com {{ efeito.meses }} meses pareados, a diferença ainda não é significativa neste recorte (α = 5%).{% endif %}
-        {% if efeito.corrida_pct is not None %}Jul a set/2025, antes do prazo: {% if efeito.corrida_pct > 0 %}+{% endif %}{{ efeito.corrida_pct|floatformat:1 }}% contra 2024.{% endif %}
-      </p>
+        {% if c %}{% controles_carrossel "Resultado|Os pares|Teste t pareado|Wilcoxon" %}{% endif %}
+      </div>
+      {% endwith %}
       {% else %}
       <p class="{% classe 'vazio' %} mt-6">Poucas vendas neste recorte para comparar.</p>
       {% endif %}
@@ -190,28 +250,83 @@
       </details>
     </article>
 
-    <article class="card p-5" aria-labelledby="titulo-correlacao">
+    <article class="card min-w-0 p-5" aria-labelledby="titulo-correlacao">
       <h3 id="titulo-correlacao" class="{% classe 'card-titulo' %}">A renda explica a adoção?</h3>
       {% if adocao.spearman is not None %}
-      <dl class="mt-4 grid grid-cols-2 gap-2">
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Spearman (ρ)</dt>
-          <dd class="mt-0.5 text-2xl font-semibold tracking-tight">{{ adocao.spearman|floatformat:2 }}</dd>
-          <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ adocao.p_spearman|valor_p }}</dd>
+      {% with c=adocao.calculo %}
+      <div x-data="carrossel" role="region" aria-roledescription="carrossel" aria-label="Contas da correlação entre renda e adoção" class="mt-4">
+        <div x-ref="trilho" class="{% classe 'trilho' %}">
+          {# 1. Resultado #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Resultado">
+            <dl class="grid grid-cols-2 gap-2">
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Spearman (ρ)</dt>
+                <dd class="mt-0.5 text-2xl font-semibold tracking-tight">{{ adocao.spearman|floatformat:2 }}</dd>
+                <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ adocao.p_spearman|valor_p }}</dd>
+              </div>
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pearson (r)</dt>
+                <dd class="mt-0.5 text-2xl font-semibold tracking-tight">{{ adocao.pearson|floatformat:2 }}</dd>
+                <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ adocao.p_pearson|valor_p }}</dd>
+              </div>
+            </dl>
+            <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
+              Correlação {% if adocao.spearman >= 0.7 %}forte{% elif adocao.spearman >= 0.4 %}moderada{% else %}fraca{% endif %} e positiva entre renda e adoção nos {{ adocao.n }} condados.
+              Pela regressão, cada US$ 1 mil a mais de renda mediana acompanha {{ adocao.inclinacao|floatformat:2 }} veículo a mais por mil habitantes.
+            </p>
+            {% if adocao_atual %}
+            <p class="mt-3 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">{{ condado }}: renda de US$ {{ adocao_atual.renda|floatformat:"0g" }} e {{ adocao_atual.por_mil|floatformat:1 }} veículos por mil habitantes (estado: {{ adocao.por_mil_estado|floatformat:1 }}).</p>
+            {% endif %}
+          </div>
+
+          {# 2. Pearson #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Pearson">
+            <p class="{% classe 'passo' %}"><var>x</var> = renda mediana (US$ mil), <var>y</var> = veículos por mil hab., n = {{ c.n }} condados.</p>
+            <ol class="mt-2.5 space-y-2.5">
+              <li><p class="{% classe 'passo' %}">Médias</p>
+                <p class="{% classe 'formula' %}">x̄ = {{ c.media_x|num:2 }} &nbsp;·&nbsp; ȳ = {{ c.media_y|num:2 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Somas dos quadrados e dos produtos</p>
+                <p class="{% classe 'formula' %}">S<sub>xx</sub> = Σ(x − x̄)² = {{ c.sxx|num:1 }}<br>S<sub>yy</sub> = Σ(y − ȳ)² = {{ c.syy|num:1 }}<br>S<sub>xy</sub> = Σ(x − x̄)(y − ȳ) = {{ c.sxy|num:1 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Coeficiente</p>
+                <p class="{% classe 'formula' %}">r = S<sub>xy</sub> / √(S<sub>xx</sub> · S<sub>yy</sub>) = <strong>{{ c.r|num:3 }}</strong></p></li>
+              <li><p class="{% classe 'passo' %}">Teste de H₀: ρ = 0, com {{ c.graus }} graus de liberdade (n − 2)</p>
+                <p class="{% classe 'formula' %}">t = r √(n − 2) / √(1 − r²) = {{ c.t_r|num:2 }}<br>{{ adocao.p_pearson|valor_p }}</p></li>
+            </ol>
+          </div>
+
+          {# 3. Spearman #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Spearman">
+            <p class="{% classe 'passo' %}">Troca cada valor pela sua posição (posto 1 = menor). Mede se a ordem da renda acompanha a ordem da adoção, sem exigir uma reta e sem sofrer com os condados extremos.</p>
+            <ol class="mt-2.5 space-y-2.5">
+              <li><p class="{% classe 'passo' %}">Diferença de postos em cada condado</p>
+                <p class="{% classe 'formula' %}">d = posto(x) − posto(y) → Σd² = {{ c.soma_d2|num:0 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Coeficiente</p>
+                <p class="{% classe 'formula' %}">ρ = 1 − 6Σd² / [n(n² − 1)]<br>&nbsp;&nbsp;= 1 − 6 · {{ c.soma_d2|num:0 }} / {{ c.n_cubo|num:0 }} = <strong>{{ c.rho_formula|num:3 }}</strong></p></li>
+              <li><p class="{% classe 'passo' %}">Teste de H₀: ρ = 0 ({{ c.graus }} g.l.)</p>
+                <p class="{% classe 'formula' %}">t = ρ √(n − 2) / √(1 − ρ²) = {{ c.t_rho|num:2 }}<br>{{ adocao.p_spearman|valor_p }}</p></li>
+            </ol>
+            {% if c.tem_empates %}<p class="{% classe 'passo' %} mt-3">Há empates (posto médio): o valor exato é o Pearson aplicado aos postos, ρ = {{ c.rho|num:3 }}.</p>{% endif %}
+          </div>
+
+          {# 4. Regressão #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Regressão linear">
+            <p class="{% classe 'passo' %}">Mínimos quadrados: a reta que deixa a menor soma de erros ao quadrado (a linha do gráfico).</p>
+            <ol class="mt-2.5 space-y-2.5">
+              <li><p class="{% classe 'passo' %}">Inclinação</p>
+                <p class="{% classe 'formula' %}">b = S<sub>xy</sub> / S<sub>xx</sub> = {{ c.sxy|num:1 }} / {{ c.sxx|num:1 }} = {{ c.inclinacao|num:3 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Intercepto</p>
+                <p class="{% classe 'formula' %}">a = ȳ − b·x̄ = {{ c.media_y|num:2 }} − {{ c.inclinacao|num:3 }} · {{ c.media_x|num:2 }} = {{ c.intercepto|num:2 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Reta ajustada</p>
+                <p class="{% classe 'formula' %}">ŷ = <strong>{{ c.intercepto|num:2 }} + {{ c.inclinacao|num:3 }} · x</strong></p></li>
+              <li><p class="{% classe 'passo' %}">Quanto da variação a renda explica</p>
+                <p class="{% classe 'formula' %}">R² = r² = {{ c.r|num:3 }}² = {{ c.r2|num:2 }}</p></li>
+            </ol>
+            <p class="{% classe 'passo' %} mt-3">A renda explica cerca de {{ c.r2|porcento }} da diferença de adoção entre condados; o resto vem de outros fatores.</p>
+          </div>
         </div>
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pearson (r)</dt>
-          <dd class="mt-0.5 text-2xl font-semibold tracking-tight">{{ adocao.pearson|floatformat:2 }}</dd>
-          <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ adocao.p_pearson|valor_p }}</dd>
-        </div>
-      </dl>
-      <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
-        Correlação {% if adocao.spearman >= 0.7 %}forte{% elif adocao.spearman >= 0.4 %}moderada{% else %}fraca{% endif %} e positiva entre renda e adoção nos {{ adocao.n }} condados.
-        Pela regressão, cada US$ 1 mil a mais de renda mediana acompanha {{ adocao.inclinacao|floatformat:2 }} veículo a mais por mil habitantes.
-      </p>
-      {% if adocao_atual %}
-      <p class="mt-3 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">{{ condado }}: renda de US$ {{ adocao_atual.renda|floatformat:"0g" }} e {{ adocao_atual.por_mil|floatformat:1 }} veículos por mil habitantes (estado: {{ adocao.por_mil_estado|floatformat:1 }}).</p>
-      {% endif %}
+        {% controles_carrossel "Resultado|Pearson|Spearman|Regressão" %}
+      </div>
+      {% endwith %}
       {% else %}
       <p class="{% classe 'vazio' %} mt-6">Rode <code>python manage.py importar_fontes</code> para ver a análise.</p>
       {% endif %}
@@ -220,28 +335,47 @@
 
   {# ---------- Recarga pública ---------- #}
   <div class="mt-3 grid gap-3 lg:grid-cols-3">
-    <article class="card p-5" aria-labelledby="titulo-recarga">
+    <article class="card min-w-0 p-5" aria-labelledby="titulo-recarga">
       <h3 id="titulo-recarga" class="{% classe 'card-titulo' %}">Recarga pública {% if condado %}em {{ condado }}{% else %}no estado{% endif %}</h3>
       <p class="{% classe 'card-descricao' %}">Estações abertas ao público e em funcionamento (NREL/AFDC).</p>
       {% if recarga_atual %}
-      <dl class="mt-4 grid grid-cols-2 gap-2">
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Estações</dt>
-          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.estacoes|floatformat:"0g" }}</dd>
+      <div x-data="carrossel" role="region" aria-roledescription="carrossel" aria-label="Contas da recarga pública" class="mt-4">
+        <div x-ref="trilho" class="{% classe 'trilho' %}">
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Resultado">
+            <dl class="grid grid-cols-2 gap-2">
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Estações</dt>
+                <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.estacoes|floatformat:"0g" }}</dd>
+              </div>
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pontos (todos)</dt>
+                <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.pontos|floatformat:"0g" }}</dd>
+              </div>
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pontos rápidos (DC)</dt>
+                <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.rapidos|floatformat:"0g" }}</dd>
+              </div>
+              <div class="{% classe 'estatistica' %}">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">BEV por ponto rápido</dt>
+                <dd class="mt-0.5 text-xl font-semibold tracking-tight">{% if recarga_atual.bev_por_rapido %}{{ recarga_atual.bev_por_rapido|floatformat:1 }}{% else %}–{% endif %}</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="As contas">
+            <ol class="space-y-2.5">
+              <li><p class="{% classe 'passo' %}">Veículos (BEV + PHEV) por ponto público, qualquer nível</p>
+                <p class="{% classe 'formula' %}">{{ recarga_atual.veiculos|num:0 }} / {{ recarga_atual.pontos|num:0 }} = <strong>{% if recarga_atual.por_ponto %}{{ recarga_atual.por_ponto|num:1 }}{% else %}sem ponto{% endif %}</strong></p></li>
+              <li><p class="{% classe 'passo' %}">BEV por ponto rápido (só o BEV depende 100% da tomada)</p>
+                <p class="{% classe 'formula' %}">{{ recarga_atual.bev|num:0 }} / {{ recarga_atual.rapidos|num:0 }} = <strong>{% if recarga_atual.bev_por_rapido %}{{ recarga_atual.bev_por_rapido|num:1 }}{% else %}sem ponto rápido{% endif %}</strong></p></li>
+              {% if condado and recarga.estado.por_ponto and recarga_atual.por_ponto %}
+              <li><p class="{% classe 'passo' %}">Comparado com o estado ({{ recarga.estado.por_ponto|num:1 }})</p>
+                <p class="{% classe 'formula' %}">{{ recarga_atual.por_ponto|num:1 }} / {{ recarga.estado.por_ponto|num:1 }} = {{ recarga_atual.por_ponto|razao:recarga.estado.por_ponto }}×</p></li>
+              {% endif %}
+            </ol>
+          </div>
         </div>
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pontos (todos)</dt>
-          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.pontos|floatformat:"0g" }}</dd>
-        </div>
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Pontos rápidos (DC)</dt>
-          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{{ recarga_atual.rapidos|floatformat:"0g" }}</dd>
-        </div>
-        <div class="{% classe 'estatistica' %}">
-          <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">BEV por ponto rápido</dt>
-          <dd class="mt-0.5 text-xl font-semibold tracking-tight">{% if recarga_atual.bev_por_rapido %}{{ recarga_atual.bev_por_rapido|floatformat:1 }}{% else %}–{% endif %}</dd>
-        </div>
-      </dl>
+        {% controles_carrossel "Resultado|As contas" %}
+      </div>
       {% endif %}
       {% if recarga.sem_ponto %}
       <p class="{% classe 'aviso' %} mt-4">{% icone "alerta" "mt-0.5 size-3.5 shrink-0" %}<span>Sem nenhum ponto público: {{ recarga.sem_ponto|join:", " }}.</span></p>
