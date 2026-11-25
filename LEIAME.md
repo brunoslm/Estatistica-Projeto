@@ -2,7 +2,8 @@
 
 Projeto de estatística em Django. Página inicial com o mapa dos EUA (us-atlas + d3): Washington em vermelho;
 clique para aproximar e ver os condados coloridos pela quantidade de veículos. Abaixo, o painel da frota
-(filtrável por condado, pelo select ou clicando no mapa).
+(filtrável por condado, pelo select ou clicando no mapa). Ao clicar num condado, um resumo dele aparece logo
+abaixo do mapa.
 
 ## Rodar
 
@@ -12,13 +13,16 @@ python manage.py preparar              # descompacta dados/*.xz, migra e importa
 python manage.py runserver
 ```
 
+Não precisa de internet, curl nem npm: os dados, o CSS compilado e as bibliotecas (d3, htmx, Alpine, KaTeX)
+já vêm no repositório. O npm só é necessário para mexer no estilo (veja Front-end).
+
 Os dados já vêm no repositório, comprimidos em `dados/*.xz` (~6 MB). Só use `baixar_fontes` se quiser
 atualizar as fontes complementares; depois rode `xz -9 -k -f dados/<arquivo>` para comprimir a versão nova
 e faça o commit do `.xz`.
 
 A base vem do portal oficial: https://data.wa.gov (dataset `f6w7-q2d2`, "Electric Vehicle Population Data").
-Para atualizar, baixe o CSV de novo para `dados/` e rode `importar_veiculos`: o cache das estatísticas se
-renova sozinho (a chave inclui a versão da importação).
+Para atualizar, baixe o CSV de novo para `dados/`, comprima com `xz -9 -k -f` e rode `importar_veiculos`:
+o cache das estatísticas se renova sozinho (a chave inclui a versão da importação).
 
 ## Fontes complementares
 
@@ -33,6 +37,7 @@ renova sozinho (a chave inclui a versão da importação).
 
 - **Fim do crédito federal (30/09/2025):** cada mês depois do fim é comparado com o mesmo mês do ano
   anterior (pareado, sem sazonalidade); diferença testada com t pareado e Wilcoxon (`scipy.stats`).
+  A premissa do t é verificada com Shapiro-Wilk e gráfico Q-Q, e o tamanho do efeito vem do d de Cohen (d_z).
 - **Renda × adoção:** Spearman, Pearson e regressão linear entre a renda mediana e os veículos por mil
   habitantes nos 39 condados. É uma análise ecológica: correlação por condado, não causa.
 - **Recarga:** veículos por ponto público e BEV por ponto rápido (DC). As estações são ligadas ao condado
@@ -61,6 +66,10 @@ com valores próprios no tema escuro) e os conjuntos de classes repetidos ficam 
 
 ```bash
 npm install
-npm run vendor      # copia d3, topojson-client, us-atlas, htmx, Alpine CSP e a fonte Inter para static/
+npm run vendor      # copia d3, topojson-client, us-atlas, htmx, Alpine CSP, KaTeX e a fonte Inter para static/
 npm run build:css   # compila assets/css/app.css -> static/css/app.css (use watch:css enquanto edita)
 ```
+
+As fórmulas são LaTeX dentro de elementos com `data-tex` (o filtro `|tex` formata os números no padrão
+brasileiro). O KaTeX desenha no navegador (`static/js/formulas.js`) com `katex.render`, que aplica os estilos
+pelo DOM; o HTML pronto do servidor traria `style=""` inline, bloqueado pela CSP. Em LaTeX, use `\%`.
