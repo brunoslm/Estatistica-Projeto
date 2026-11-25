@@ -56,8 +56,8 @@
     </ol>
   </section>
 
-  <div class="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-    <section aria-labelledby="titulo-mapa" data-mapa data-estado="eua" data-atlas="{% static 'dados/counties-albers-10m.json' %}" class="group card overflow-hidden">
+  <div class="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+    <section aria-labelledby="titulo-mapa" data-mapa data-estado="eua" data-atlas="{% static 'dados/counties-albers-10m.json' %}" class="group card flex flex-col overflow-hidden">
       <div class="flex h-14 items-center justify-between gap-3 border-b border-zinc-200/80 px-4 dark:border-zinc-800">
         <h2 id="titulo-mapa" class="flex min-w-0 items-center gap-1.5 text-sm font-medium">
           <span class="text-zinc-500 group-data-[estado=washington]:text-zinc-400 dark:text-zinc-400 dark:group-data-[estado=washington]:text-zinc-500">Estados Unidos</span>
@@ -93,11 +93,13 @@
       <p class="flex items-center gap-2 border-t border-zinc-200/80 px-4 py-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
         {% icone "cursor" "size-3.5 shrink-0" %}
         <span class="group-data-[estado=washington]:hidden">Clique em Washington para aproximar.</span>
-        <span class="hidden group-data-[estado=washington]:inline">Condado filtra o painel; cidade abre os detalhes. <kbd class="font-sans font-medium">Esc</kbd> volta para os EUA.</span>
+        <span class="hidden group-data-[estado=washington]:inline">Condado mostra o resumo abaixo e filtra o painel; cidade abre os detalhes. <kbd class="font-sans font-medium">Esc</kbd> volta para os EUA.</span>
       </p>
+
+      {% include "mapa/_resumo_mapa.html" %}
     </section>
 
-    <aside class="flex flex-col gap-6">
+    <aside class="flex flex-col gap-6 lg:sticky lg:top-24">
       <div id="painel-cidade" class="card p-5 transition-opacity duration-150 [&.htmx-request]:opacity-55" aria-live="polite">
         <div class="flex flex-col items-start">
           <span class="grid size-10 place-items-center rounded-xl bg-red-50 text-red-600 ring-1 ring-red-600/15 ring-inset dark:bg-red-500/10 dark:text-red-300 dark:ring-red-400/20">{% icone "pino" "size-5" %}</span>

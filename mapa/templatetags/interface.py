@@ -72,8 +72,9 @@ CLASSES = {
     "cartao": "w-full shrink-0 snap-start snap-always",
     "passo-rotulo": "text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400",
     "passo": "text-xs leading-5 text-pretty text-zinc-600 dark:text-zinc-300",
-    "formula": "mt-1 overflow-x-auto rounded-lg bg-zinc-50 px-3 py-2 font-mono text-xs leading-6 whitespace-nowrap "
-    "text-zinc-800 tabular-nums dark:bg-zinc-800/60 dark:text-zinc-200",
+    # Fórmulas em LaTeX (data-tex): o KaTeX desenha no navegador (static/js/formulas.js).
+    "formula": "mt-1 overflow-x-auto overflow-y-hidden rounded-lg bg-zinc-50 px-3 py-2.5 text-xs leading-6 "
+    "whitespace-nowrap text-zinc-800 dark:bg-zinc-800/60 dark:text-zinc-200",
 }
 
 
@@ -102,6 +103,24 @@ def num(valor, casas=2):
     texto = f"{abs(valor):,.{casas}f}".replace(",", "@").replace(".", ",").replace("@", ".")
     negativo = valor < 0 and round(abs(valor), casas) != 0
     return f"−{texto}" if negativo else texto
+
+
+@register.filter
+def tex(valor, casas=2):
+    """Número para dentro do LaTeX: -1917.04 -> '-1.917{,}04' (a vírgula decimal sem o espaço de pontuação).
+
+    Aceita também um texto já formatado ('1,9' vindo de razao): {{ a|razao:b|tex }}.
+    """
+    texto = valor if isinstance(valor, str) else num(valor, casas)
+    if texto == "–":
+        return r"\text{–}"
+    return texto.replace("−", "-").replace(",", "{,}")
+
+
+@register.filter
+def valor_p_tex(valor):
+    """valor_p em LaTeX: 'p < 0{,}001' ou 'p = 0{,}034'."""
+    return tex(valor_p(valor)).replace("p indisponível", r"\text{p indisponível}")
 
 
 @register.inclusion_tag("partials/carrossel_controles.html")

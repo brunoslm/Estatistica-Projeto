@@ -366,7 +366,7 @@
       .attr("class", CLASSE.alvo)
       .attr("x", margem.esquerda)
       .attr("y", margem.topo)
-      .attr("width", largura - margem.esquerda - margem.direita + 8)
+      .attr("width", Math.max(0, largura - margem.esquerda - margem.direita + 8))
       .attr("height", altura - margem.topo - margem.base)
       .on("pointerenter pointermove", (evento) => {
         const [posicao] = d3.pointer(evento);
@@ -675,7 +675,7 @@
       .attr("class", CLASSE.alvo)
       .attr("x", margem.esquerda)
       .attr("y", margem.topo)
-      .attr("width", largura - margem.esquerda - margem.direita)
+      .attr("width", Math.max(0, largura - margem.esquerda - margem.direita))
       .attr("height", altura - margem.topo - margem.base)
       .on("pointerenter pointermove", (evento) => {
         const [posicao] = d3.pointer(evento);
@@ -827,7 +827,7 @@
       .attr("class", `${CLASSE.alvo} cursor-pointer`)
       .attr("x", margem.esquerda)
       .attr("y", margem.topo)
-      .attr("width", largura - margem.esquerda - margem.direita)
+      .attr("width", Math.max(0, largura - margem.esquerda - margem.direita))
       .attr("height", altura - margem.topo - margem.base)
       .on("pointerenter pointermove", (evento) => {
         const [px, py] = d3.pointer(evento);
@@ -858,6 +858,119 @@
 
   /* ---------- Montagem ---------- */
 
+  /* ---------- Q-Q: diferenças mensais contra os quantis da normal (premissa do teste t) ---------- */
+
+  function graficoNormalidade(elemento, normalidade) {
+    const pontos = normalidade.pontos || [];
+    if (pontos.length < 3) return;
+    const largura = elemento.clientWidth;
+    const altura = elemento.clientHeight;
+    const margem = { topo: 20, direita: 12, base: 32, esquerda: 52 };
+    const svg = novoSvg(elemento, largura, altura);
+    // Reta de referência: onde os pontos cairiam se os d fossem normais com a média e o desvio observados.
+    const reta = (z) => normalidade.media + normalidade.desvio * z;
+
+    const limiteZ = Math.max(...pontos.map((ponto) => Math.abs(ponto.z))) * 1.15;
+    const x = d3.scaleLinear().domain([-limiteZ, limiteZ]).range([margem.esquerda, largura - margem.direita]);
+    const valoresY = pontos.map((ponto) => ponto.d).concat([reta(-limiteZ), reta(limiteZ)]);
+    const y = d3.scaleLinear().domain(d3.extent(valoresY)).nice().range([altura - margem.base, margem.topo]);
+
+    const ticksY = y.ticks(4);
+    svg
+      .append("g")
+      .selectAll("line")
+      .data(ticksY)
+      .join("line")
+      .attr("class", CLASSE.grade)
+      .attr("x1", margem.esquerda)
+      .attr("x2", largura - margem.direita)
+      .attr("y1", (valor) => Math.round(y(valor)) + 0.5)
+      .attr("y2", (valor) => Math.round(y(valor)) + 0.5);
+    svg
+      .append("g")
+      .selectAll("text")
+      .data(ticksY)
+      .join("text")
+      .attr("class", CLASSE.eixo)
+      .attr("x", margem.esquerda - 8)
+      .attr("y", (valor) => y(valor))
+      .attr("dy", "0.32em")
+      .attr("text-anchor", "end")
+      .text((valor) => compacto.format(valor));
+    svg
+      .append("g")
+      .selectAll("text")
+      .data(x.ticks(5).filter(Number.isInteger))
+      .join("text")
+      .attr("class", CLASSE.eixo)
+      .attr("x", (valor) => x(valor))
+      .attr("y", altura - margem.base + 16)
+      .attr("text-anchor", "middle")
+      .text((valor) => numero.format(valor));
+    svg
+      .append("text")
+      .attr("class", CLASSE.rotuloSuave)
+      .attr("x", largura - margem.direita)
+      .attr("y", altura - 2)
+      .attr("text-anchor", "end")
+      .text("quantil teórico da normal (z)");
+    svg
+      .append("text")
+      .attr("class", CLASSE.rotuloSuave)
+      .attr("x", margem.esquerda - 44)
+      .attr("y", margem.topo - 10)
+      .text("d (vendas a menos ou a mais)");
+
+    svg
+      .append("line")
+      .attr("class", CLASSE.tendencia)
+      .attr("x1", x(-limiteZ))
+      .attr("y1", y(reta(-limiteZ)))
+      .attr("x2", x(limiteZ))
+      .attr("y2", y(reta(limiteZ)));
+
+    const marcas = svg
+      .append("g")
+      .selectAll("circle")
+      .data(pontos)
+      .join("circle")
+      .attr("class", `${CLASSE.ponto} ${CLASSE.marca} fill-serie-1`)
+      .attr("cx", (ponto) => x(ponto.z))
+      .attr("cy", (ponto) => y(ponto.d))
+      .attr("r", 5);
+
+    const delaunay = d3.Delaunay.from(
+      pontos,
+      (ponto) => x(ponto.z),
+      (ponto) => y(ponto.d)
+    );
+    svg
+      .append("rect")
+      .attr("class", CLASSE.alvo)
+      .attr("x", margem.esquerda)
+      .attr("y", margem.topo)
+      .attr("width", Math.max(0, largura - margem.esquerda - margem.direita))
+      .attr("height", Math.max(0, altura - margem.topo - margem.base))
+      .on("pointerenter pointermove", (evento) => {
+        const [px, py] = d3.pointer(evento);
+        const ponto = pontos[delaunay.find(px, py)];
+        if (Math.hypot(px - x(ponto.z), py - y(ponto.d)) > 32) {
+          esmaecer(marcas, null);
+          return esconderDica();
+        }
+        esmaecer(marcas, ponto);
+        mostrarDica(evento, ponto.mes, [
+          { rotulo: "d observado", valor: numero.format(ponto.d), cor: "serie-1" },
+          { rotulo: "Esperado se normal", valor: numero.format(Math.round(reta(ponto.z))) },
+          { rotulo: "z", valor: ponto.z.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) },
+        ]);
+      })
+      .on("pointerleave", () => {
+        esmaecer(marcas, null);
+        esconderDica();
+      });
+  }
+
   const GRAFICOS = {
     anos: graficoAnos,
     autonomia: graficoAutonomia,
@@ -865,6 +978,7 @@
     vendas: graficoVendas,
     adocao: graficoAdocao,
     elegibilidade: graficoElegibilidade,
+    normalidade: graficoNormalidade,
   };
 
   function desenharPainel() {

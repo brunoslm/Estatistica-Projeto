@@ -3,7 +3,7 @@
   "scripts": {
     "build:css": "tailwindcss -i ./assets/css/app.css -o ./static/css/app.css --minify",
     "watch:css": "tailwindcss -i ./assets/css/app.css -o ./static/css/app.css --watch",
-    "vendor": "mkdir -p static/vendor static/dados static/fonts && cp node_modules/d3/dist/d3.min.js node_modules/topojson-client/dist/topojson-client.min.js node_modules/htmx.org/dist/htmx.min.js static/vendor/ && cp node_modules/@alpinejs/csp/dist/cdn.min.js static/vendor/alpine-csp.min.js && cp node_modules/us-atlas/counties-albers-10m.json static/dados/ && cp node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2 node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2 static/fonts/"
+    "vendor": "mkdir -p static/vendor static/dados static/fonts && cp node_modules/d3/dist/d3.min.js node_modules/topojson-client/dist/topojson-client.min.js node_modules/htmx.org/dist/htmx.min.js static/vendor/ && cp node_modules/@alpinejs/csp/dist/cdn.min.js static/vendor/alpine-csp.min.js && cp node_modules/us-atlas/counties-albers-10m.json static/dados/ && cp node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2 node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2 static/fonts/ && mkdir -p static/vendor/katex/fonts && cp node_modules/katex/dist/katex.min.js node_modules/katex/dist/katex.min.css static/vendor/katex/ && cp node_modules/katex/dist/fonts/*.woff2 static/vendor/katex/fonts/"
   },
   "devDependencies": {
     "@alpinejs/csp": "^3.17.5",
@@ -11,6 +11,7 @@
     "@tailwindcss/cli": "^4.3.5",
     "d3": "^7.9.2",
     "htmx.org": "^2.0.11",
+    "katex": "^0.16.47",
     "tailwindcss": "^4.3.5",
     "topojson-client": "^3.1.0",
     "us-atlas": "^3.0.1"

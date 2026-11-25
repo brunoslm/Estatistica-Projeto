@@ -8,12 +8,13 @@ clique para aproximar e ver os condados coloridos pela quantidade de veículos. 
 
 ```bash
 source .venv/bin/activate              # ou: python -m venv .venv && pip install -r requirements.txt
-python manage.py migrate
-python manage.py importar_veiculos     # lê dados/Electric_Vehicle_Population_Data.csv (~20 s)
-python manage.py baixar_fontes         # população, renda, carregadores e vendas mensais (~20 s, usa o curl)
-python manage.py importar_fontes
+python manage.py preparar              # descompacta dados/*.xz, migra e importa tudo (~20 s, sem internet)
 python manage.py runserver
 ```
+
+Os dados já vêm no repositório, comprimidos em `dados/*.xz` (~6 MB). Só use `baixar_fontes` se quiser
+atualizar as fontes complementares; depois rode `xz -9 -k -f dados/<arquivo>` para comprimir a versão nova
+e faça o commit do `.xz`.
 
 A base vem do portal oficial: https://data.wa.gov (dataset `f6w7-q2d2`, "Electric Vehicle Population Data").
 Para atualizar, baixe o CSV de novo para `dados/` e rode `importar_veiculos`: o cache das estatísticas se

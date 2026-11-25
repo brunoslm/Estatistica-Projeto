@@ -1,6 +1,8 @@
 import json
 
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 
 from frota import estatisticas
 
@@ -15,6 +17,29 @@ def eh_htmx(request):
         and not cabecalhos.get("HX-Boosted")
         and not cabecalhos.get("HX-History-Restore-Request")
     )
+
+
+RESUMO_TOP = 5
+
+
+def montar_resumo_mapa(condado, dados, tabela, adocao_atual):
+    """Resumo embaixo do mapa: posição do condado e os 5 maiores (cidades do condado ou condados do estado)."""
+    if condado:
+        posicao = next((i for i, linha in enumerate(tabela, start=1) if linha["condado"] == condado), None)
+        lugares = dados["cidades"][:RESUMO_TOP]
+    else:
+        posicao = None
+        lugares = [
+            {"nome": linha["condado"], "total": linha["total"], "pct": linha["pct_estado"]}
+            for linha in tabela[:RESUMO_TOP]
+        ]
+    return {
+        "posicao": posicao,
+        "n_condados": len(tabela),
+        "populacao": (adocao_atual or {}).get("populacao"),
+        "lugares": lugares,
+        "modelos": dados["modelos"][:RESUMO_TOP],
+    }
 
 
 def montar_contexto_painel(condado):
@@ -45,6 +70,7 @@ def montar_contexto_painel(condado):
         "efeito": efeito,
         "adocao": adocao,
         "adocao_atual": por_condado.get(condado),
+        "resumo_mapa": montar_resumo_mapa(condado, dados, tabela, por_condado.get(condado)),
         "recarga": recarga,
         "recarga_atual": recarga_atual,
         "piores_recarga": [
@@ -61,6 +87,15 @@ def montar_contexto_painel(condado):
                 "elegibilidade": dados["elegibilidade"],
                 "vendas": vendas,
                 "fimCredito": f"{estatisticas.FIM_CREDITO_FEDERAL:%Y-%m}",
+                "normalidade": (
+                    {
+                        "pontos": efeito["calculo"]["qq"],
+                        "media": efeito["calculo"]["media"],
+                        "desvio": efeito["calculo"]["desvio"],
+                    }
+                    if efeito and efeito.get("calculo")
+                    else None
+                ),
                 "adocao": {
                     "pontos": adocao["pontos"],
                     "inclinacao": adocao.get("inclinacao"),
@@ -80,7 +115,11 @@ def pagina_inicial(request):
 
     contexto = montar_contexto_painel(condado)
     if eh_htmx(request):
-        return render(request, "mapa/_painel.html", contexto)
+        # O painel troca no lugar (#painel) e o resumo embaixo do mapa vem junto, fora de banda (hx-swap-oob).
+        html = render_to_string("mapa/_painel.html", contexto, request) + render_to_string(
+            "mapa/_resumo_mapa.html", {**contexto, "oob": True}, request
+        )
+        return HttpResponse(html)
 
     cidades = list(Cidade.objects.all())
     contexto.update(

@@ -1,0 +1,59 @@
+{% load interface %}
+{# Resumo embaixo do mapa: o condado filtrado ou, sem filtro, o estado.                                     #}
+{# Na página inteira entra pelo include; no filtro do htmx vem junto do painel com hx-swap-oob (views.py). #}
+<div id="resumo-mapa" {% if oob %}hx-swap-oob="true"{% endif %} aria-live="polite"
+     class="flex flex-1 flex-col border-t border-zinc-200/80 p-4 sm:p-5 dark:border-zinc-800">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0">
+      <p class="text-[11px] font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">{% if condado %}Condado selecionado{% else %}Visão geral{% endif %}</p>
+      <h3 class="mt-1 text-lg font-semibold tracking-tight">{% if condado %}{{ condado }}{% else %}Estado de Washington{% endif %}</h3>
+      {% if condado and adocao_atual.renda %}
+      <p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Renda mediana domiciliar: US$ {{ adocao_atual.renda|floatformat:"0g" }} · {{ resumo_mapa.populacao|floatformat:"0g" }} habitantes</p>
+      {% elif not condado %}
+      <p class="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Clique num condado do mapa para ver o resumo dele aqui.</p>
+      {% endif %}
+    </div>
+    {% if condado and resumo_mapa.posicao %}
+    <span class="{% classe 'selo-alerta' %}">{{ resumo_mapa.posicao }}º de {{ resumo_mapa.n_condados }} em veículos</span>
+    {% endif %}
+  </div>
+
+  <dl class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div class="{% classe 'estatistica' %}">
+      <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Veículos</dt>
+      <dd class="mt-0.5 font-semibold tracking-tight tabular-nums">{{ painel.total|floatformat:"0g" }}</dd>
+      {% if condado %}<dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ painel.pct_estado|floatformat:1 }}% do estado</dd>{% endif %}
+    </div>
+    <div class="{% classe 'estatistica' %}">
+      <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Por mil habitantes</dt>
+      <dd class="mt-0.5 font-semibold tracking-tight tabular-nums">{% if condado %}{{ adocao_atual.por_mil|floatformat:1|default:"–" }}{% else %}{{ adocao.por_mil_estado|floatformat:1 }}{% endif %}</dd>
+      {% if condado %}<dd class="text-[11px] text-zinc-500 dark:text-zinc-400">estado: {{ adocao.por_mil_estado|floatformat:1 }}</dd>{% endif %}
+    </div>
+    <div class="{% classe 'estatistica' %}">
+      <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">100% elétricos</dt>
+      <dd class="mt-0.5 font-semibold tracking-tight tabular-nums">{{ painel.pct_bev|floatformat:1 }}%</dd>
+      <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ painel.bev|floatformat:"0g" }} BEV</dd>
+    </div>
+    <div class="{% classe 'estatistica' %}">
+      <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Veículos por ponto</dt>
+      <dd class="mt-0.5 font-semibold tracking-tight tabular-nums">{% if recarga_atual.por_ponto %}{{ recarga_atual.por_ponto|floatformat:1 }}{% else %}sem ponto{% endif %}</dd>
+      <dd class="text-[11px] text-zinc-500 dark:text-zinc-400">{{ recarga_atual.pontos|floatformat:"0g" }} pontos públicos</dd>
+    </div>
+  </dl>
+
+  <div class="mt-5 grid gap-5 sm:grid-cols-2">
+    <div>
+      <h4 class="mb-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">{% if condado %}Cidades com mais veículos{% else %}Condados com mais veículos{% endif %}</h4>
+      {% include "partials/ranking.html" with itens=resumo_mapa.lugares %}
+    </div>
+    <div>
+      <h4 class="mb-3 text-xs font-medium text-zinc-500 dark:text-zinc-400">Modelos mais registrados</h4>
+      {% include "partials/ranking.html" with itens=resumo_mapa.modelos %}
+    </div>
+  </div>
+
+  <a href="#painel" class="focus-ring group mt-auto inline-flex items-center gap-1 self-start rounded-md pt-5 text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
+    Ver o painel completo{% if condado %} de {{ condado }}{% endif %}
+    {% icone "seta-baixo" "size-4 transition-transform duration-200 ease-out group-hover:translate-y-0.5" %}
+  </a>
+</div>

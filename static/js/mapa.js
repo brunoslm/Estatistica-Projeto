@@ -350,12 +350,12 @@
   }
 
   // Usa o próprio formulário do painel (hx-get + hx-push-url): o endereço fica compartilhável.
+  // Não rola até o painel: o resumo do condado aparece logo abaixo do mapa (com link para o painel completo).
   function filtrarCondado(nome) {
     const seletor = document.getElementById("f-condado");
     if (!seletor) return;
     seletor.value = seletor.value === nome ? "" : nome; // clicar de novo no mesmo condado limpa o filtro
     seletor.dispatchEvent(new Event("change", { bubbles: true }));
-    document.getElementById("painel").scrollIntoView({ behavior: reduzirMovimento() ? "auto" : "smooth" });
   }
 
   // Marca a cidade no mapa e na lista; com carregarPainel, busca os detalhes pelo htmx.

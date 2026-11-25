@@ -90,6 +90,12 @@
                 <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Wilcoxon</dt>
                 <dd class="mt-0.5 text-sm font-semibold">{{ efeito.p_wilcoxon|valor_p }}</dd>
               </div>
+              {% if efeito.calculo.cohen is not None %}
+              <div class="{% classe 'estatistica' %} col-span-2">
+                <dt class="text-[11px] text-zinc-500 dark:text-zinc-400">Tamanho do efeito (d de Cohen)</dt>
+                <dd class="mt-0.5 text-sm font-semibold">{{ efeito.calculo.cohen|num:2 }} · efeito {{ efeito.calculo.cohen_magnitude }}</dd>
+              </div>
+              {% endif %}
             </dl>
             <p class="mt-4 text-sm leading-6 text-pretty text-zinc-600 dark:text-zinc-300">
               {% if efeito.significativo %}A queda é estatisticamente significativa ({{ efeito.meses }} meses pareados, α = 5%).{% else %}Com {{ efeito.meses }} meses pareados, a diferença ainda não é significativa neste recorte (α = 5%).{% endif %}
@@ -101,7 +107,7 @@
           {# 2. Os pares #}
           <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Os pares">
             <p class="{% classe 'passo-rotulo' %}">Hipóteses</p>
-            <p class="{% classe 'formula' %}">H₀: μ<sub>d</sub> = 0 &nbsp;·&nbsp; H₁: μ<sub>d</sub> ≠ 0</p>
+            <p class="{% classe 'formula' %}" data-tex>H_0\colon \mu_d = 0 \qquad H_1\colon \mu_d \neq 0</p>
             <p class="{% classe 'passo' %} mt-3">Cada mês depois do fim do crédito vira um par com o mesmo mês do ano anterior (tira a sazonalidade). <var>d</var> = depois − antes.</p>
             <div class="mt-2 max-h-52 overflow-auto">
               <table class="{% classe 'tabela' %}">
@@ -109,27 +115,42 @@
                 <tbody>{% for linha in c.linhas %}<tr><th scope="row">{{ linha.mes }}</th><td>{{ linha.atual|floatformat:"0g" }}</td><td>{{ linha.anterior|floatformat:"0g" }}</td><td>{{ linha.diferenca|num:0 }}</td></tr>{% endfor %}</tbody>
               </table>
             </div>
-            <p class="{% classe 'formula' %} mt-2">variação = ({{ efeito.depois|num:0 }} − {{ efeito.antes|num:0 }}) / {{ efeito.antes|num:0 }} = {{ efeito.variacao_pct|num:1 }}%</p>
+            <p class="{% classe 'formula' %} mt-2" data-tex>\text{variação} = \dfrac{ {{ efeito.depois|tex:0 }} - {{ efeito.antes|tex:0 }} }{ {{ efeito.antes|tex:0 }} } = {{ efeito.variacao_pct|tex:1 }}\%</p>
           </div>
 
-          {# 3. Teste t pareado #}
+          {# 3. Normalidade (premissa do teste t) #}
+          <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Normalidade">
+            <p class="{% classe 'passo' %}">O teste t supõe que os <var>d</var> vêm de uma distribuição normal. No gráfico Q-Q, cada mês é um ponto: se os dados forem normais, os pontos ficam perto da reta.</p>
+            <div data-grafico="normalidade" class="mt-3 h-52" role="img" aria-label="Gráfico Q-Q das diferenças mensais contra os quantis da normal. Os valores estão na tabela do cartão Os pares."></div>
+            <ol class="mt-3 space-y-2.5">
+              <li><p class="{% classe 'passo' %}">Shapiro-Wilk (H₀: os <var>d</var> são normais; os pesos <var>a</var><sub>i</sub> vêm da tabela do teste)</p>
+                <p class="{% classe 'formula' %}" data-tex>W = \dfrac{\left(\sum a_i\, d_{(i)}\right)^2}{\sum (d_i - \bar{d})^2} = {{ c.shapiro_w|tex:3 }} \qquad {{ c.shapiro_p|valor_p_tex }}</p></li>
+            </ol>
+            <p class="{% classe 'passo' %} mt-3">{% if c.shapiro_p is None %}Sem variação suficiente para testar.{% elif c.normal %}p ≥ 0,05: não há evidência contra a normalidade, então o teste t é adequado. O Wilcoxon, que não supõe normalidade, serve de confirmação.{% else %}p &lt; 0,05: os <var>d</var> fogem da normal. Com {{ c.n }} meses o teste t fica menos confiável; vale mais o Wilcoxon, que não supõe normalidade.{% endif %}</p>
+          </div>
+
+          {# 4. Teste t pareado #}
           <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Teste t pareado">
             <ol class="space-y-2.5">
               <li><p class="{% classe 'passo' %}">Média das diferenças</p>
-                <p class="{% classe 'formula' %}">d̄ = Σd / n = {{ c.soma_diferencas|num:0 }} / {{ c.n }} = {{ c.media|num:1 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>\bar{d} = \dfrac{\sum d}{n} = \dfrac{ {{ c.soma_diferencas|tex:0 }} }{ {{ c.n }} } = {{ c.media|tex:1 }}</p></li>
               <li><p class="{% classe 'passo' %}">Desvio-padrão amostral das diferenças</p>
-                <p class="{% classe 'formula' %}">s<sub>d</sub> = √[Σ(d − d̄)² / (n − 1)] = {{ c.desvio|num:1 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>s_d = \sqrt{\dfrac{\sum (d - \bar{d})^2}{n - 1}} = {{ c.desvio|tex:1 }}</p></li>
               <li><p class="{% classe 'passo' %}">Erro-padrão da média</p>
-                <p class="{% classe 'formula' %}">EP = s<sub>d</sub> / √n = {{ c.desvio|num:1 }} / √{{ c.n }} = {{ c.erro_padrao|num:1 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>\mathrm{EP} = \dfrac{s_d}{\sqrt{n}} = \dfrac{ {{ c.desvio|tex:1 }} }{\sqrt{ {{ c.n }} }} = {{ c.erro_padrao|tex:1 }}</p></li>
               <li><p class="{% classe 'passo' %}">Estatística t com {{ c.graus }} graus de liberdade (n − 1)</p>
-                <p class="{% classe 'formula' %}">t = d̄ / EP = {{ c.media|num:1 }} / {{ c.erro_padrao|num:1 }} = <strong>{{ c.t|num:2 }}</strong></p></li>
-              <li><p class="{% classe 'passo' %}">Intervalo de 95% da queda média por mês (t<sub>0,975; {{ c.graus }}</sub> = {{ c.t_critico|num:3 }})</p>
-                <p class="{% classe 'formula' %}">d̄ ± t · EP = [{{ c.ic_inferior|num:0 }} ; {{ c.ic_superior|num:0 }}]</p></li>
+                <p class="{% classe 'formula' %}" data-tex>t = \dfrac{\bar{d}}{\mathrm{EP}} = \dfrac{ {{ c.media|tex:1 }} }{ {{ c.erro_padrao|tex:1 }} } = \mathbf{ {{ c.t|tex:2 }} }</p></li>
+              <li><p class="{% classe 'passo' %}">Intervalo de 95% da queda média por mês (<span class="whitespace-nowrap" data-tex>t_{0{,}975;\,{{ c.graus }} } = {{ c.t_critico|tex:3 }}</span>)</p>
+                <p class="{% classe 'formula' %}" data-tex>\bar{d} \pm t \cdot \mathrm{EP} = \left[\, {{ c.ic_inferior|tex:0 }} \;;\; {{ c.ic_superior|tex:0 }} \,\right]</p></li>
+              {% if c.cohen is not None %}
+              <li><p class="{% classe 'passo' %}">Tamanho do efeito: d de Cohen para pares, a média em desvios-padrão (0,2 pequeno · 0,5 médio · 0,8 grande)</p>
+                <p class="{% classe 'formula' %}" data-tex>d_z = \dfrac{\bar{d}}{s_d} = \dfrac{ {{ c.media|tex:1 }} }{ {{ c.desvio|tex:1 }} } = \mathbf{ {{ c.cohen|tex:2 }} } \quad \text{(efeito {{ c.cohen_magnitude }})}</p></li>
+              {% endif %}
             </ol>
             <p class="{% classe 'passo' %} mt-3">|t| = {{ c.t|num:2|cut:"−" }} {% if efeito.p_t < 0.05 %}&gt;{% else %}≤{% endif %} {{ c.t_critico|num:3 }}, {{ efeito.p_t|valor_p }}: {% if efeito.p_t < 0.05 %}rejeita H₀.{% if c.ic_superior < 0 %} O intervalo inteiro fica abaixo de zero.{% endif %}{% else %}não rejeita H₀.{% endif %}</p>
           </div>
 
-          {# 4. Wilcoxon #}
+          {# 5. Wilcoxon #}
           <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Wilcoxon">
             <p class="{% classe 'passo' %}">Versão sem supor normalidade: ordena |<var>d</var>| do menor para o maior e dá postos (empate = posto médio). O sinal de <var>d</var> volta depois.</p>
             <div class="mt-2 max-h-40 overflow-auto">
@@ -139,15 +160,15 @@
               </table>
             </div>
             <ol class="mt-2 space-y-2">
-              <li><p class="{% classe 'formula' %}">W⁺ = soma dos postos com d &gt; 0 = {{ c.w_positivos|num:1 }}</p></li>
-              <li><p class="{% classe 'formula' %}">W⁻ = soma dos postos com d &lt; 0 = {{ c.w_negativos|num:1 }}</p></li>
-              <li><p class="{% classe 'formula' %}">W = mín(W⁺, W⁻) = <strong>{{ c.w|num:1 }}</strong> (n = {{ c.n_wilcoxon }})</p></li>
+              <li><p class="{% classe 'formula' %}" data-tex>W^{+} = \sum\limits_{d \,&gt;\, 0} \text{posto} = {{ c.w_positivos|tex:1 }}</p></li>
+              <li><p class="{% classe 'formula' %}" data-tex>W^{-} = \sum\limits_{d \,&lt;\, 0} \text{posto} = {{ c.w_negativos|tex:1 }}</p></li>
+              <li><p class="{% classe 'formula' %}" data-tex>W = \min(W^{+},\, W^{-}) = \mathbf{ {{ c.w|tex:1 }} } \qquad (n = {{ c.n_wilcoxon }})</p></li>
             </ol>
             <p class="{% classe 'passo' %} mt-3">Sem efeito, W⁺ e W⁻ ficariam perto de n(n+1)/4 = {{ c.w_esperado|num:1 }}. {% if efeito.p_wilcoxon is not None and efeito.p_wilcoxon < 0.05 %}Aqui um lado ficou com quase tudo. {% endif %}Distribuição exata: {{ efeito.p_wilcoxon|valor_p }}.</p>
           </div>
           {% endif %}
         </div>
-        {% if c %}{% controles_carrossel "Resultado|Os pares|Teste t pareado|Wilcoxon" %}{% endif %}
+        {% if c %}{% controles_carrossel "Resultado|Os pares|Normalidade|Teste t pareado|Wilcoxon" %}{% endif %}
       </div>
       {% endwith %}
       {% else %}
@@ -284,13 +305,13 @@
             <p class="{% classe 'passo' %}"><var>x</var> = renda mediana (US$ mil), <var>y</var> = veículos por mil hab., n = {{ c.n }} condados.</p>
             <ol class="mt-2.5 space-y-2.5">
               <li><p class="{% classe 'passo' %}">Médias</p>
-                <p class="{% classe 'formula' %}">x̄ = {{ c.media_x|num:2 }} &nbsp;·&nbsp; ȳ = {{ c.media_y|num:2 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>\bar{x} = {{ c.media_x|tex:2 }} \qquad \bar{y} = {{ c.media_y|tex:2 }}</p></li>
               <li><p class="{% classe 'passo' %}">Somas dos quadrados e dos produtos</p>
-                <p class="{% classe 'formula' %}">S<sub>xx</sub> = Σ(x − x̄)² = {{ c.sxx|num:1 }}<br>S<sub>yy</sub> = Σ(y − ȳ)² = {{ c.syy|num:1 }}<br>S<sub>xy</sub> = Σ(x − x̄)(y − ȳ) = {{ c.sxy|num:1 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>\begin{aligned} S_{xx} &amp;= \textstyle\sum (x - \bar{x})^2 = {{ c.sxx|tex:1 }} \\ S_{yy} &amp;= \textstyle\sum (y - \bar{y})^2 = {{ c.syy|tex:1 }} \\ S_{xy} &amp;= \textstyle\sum (x - \bar{x})(y - \bar{y}) = {{ c.sxy|tex:1 }} \end{aligned}</p></li>
               <li><p class="{% classe 'passo' %}">Coeficiente</p>
-                <p class="{% classe 'formula' %}">r = S<sub>xy</sub> / √(S<sub>xx</sub> · S<sub>yy</sub>) = <strong>{{ c.r|num:3 }}</strong></p></li>
+                <p class="{% classe 'formula' %}" data-tex>r = \dfrac{S_{xy}}{\sqrt{S_{xx}\, S_{yy}}} = \mathbf{ {{ c.r|tex:3 }} }</p></li>
               <li><p class="{% classe 'passo' %}">Teste de H₀: ρ = 0, com {{ c.graus }} graus de liberdade (n − 2)</p>
-                <p class="{% classe 'formula' %}">t = r √(n − 2) / √(1 − r²) = {{ c.t_r|num:2 }}<br>{{ adocao.p_pearson|valor_p }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>t = \dfrac{r\sqrt{n - 2}}{\sqrt{1 - r^2}} = {{ c.t_r|tex:2 }} \qquad {{ adocao.p_pearson|valor_p_tex }}</p></li>
             </ol>
           </div>
 
@@ -298,12 +319,12 @@
           <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="Spearman">
             <p class="{% classe 'passo' %}">Troca cada valor pela sua posição (posto 1 = menor). Mede se a ordem da renda acompanha a ordem da adoção, sem exigir uma reta e sem sofrer com os condados extremos.</p>
             <ol class="mt-2.5 space-y-2.5">
-              <li><p class="{% classe 'passo' %}">Diferença de postos em cada condado</p>
-                <p class="{% classe 'formula' %}">d = posto(x) − posto(y) → Σd² = {{ c.soma_d2|num:0 }}</p></li>
+              <li><p class="{% classe 'passo' %}">Diferença de postos em cada condado (<var>D</var> maiúsculo: o <var>d</var> minúsculo é a diferença do teste pareado)</p>
+                <p class="{% classe 'formula' %}" data-tex>D_i = \operatorname{posto}(x_i) - \operatorname{posto}(y_i) \;\Rightarrow\; \textstyle\sum D_i^2 = {{ c.soma_d2|tex:0 }}</p></li>
               <li><p class="{% classe 'passo' %}">Coeficiente</p>
-                <p class="{% classe 'formula' %}">ρ = 1 − 6Σd² / [n(n² − 1)]<br>&nbsp;&nbsp;= 1 − 6 · {{ c.soma_d2|num:0 }} / {{ c.n_cubo|num:0 }} = <strong>{{ c.rho_formula|num:3 }}</strong></p></li>
+                <p class="{% classe 'formula' %}" data-tex>\rho = 1 - \dfrac{6\sum D_i^2}{n(n^2 - 1)} = 1 - \dfrac{6 \cdot {{ c.soma_d2|tex:0 }} }{ {{ c.n_cubo|tex:0 }} } = \mathbf{ {{ c.rho_formula|tex:3 }} }</p></li>
               <li><p class="{% classe 'passo' %}">Teste de H₀: ρ = 0 ({{ c.graus }} g.l.)</p>
-                <p class="{% classe 'formula' %}">t = ρ √(n − 2) / √(1 − ρ²) = {{ c.t_rho|num:2 }}<br>{{ adocao.p_spearman|valor_p }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>t = \dfrac{\rho\sqrt{n - 2}}{\sqrt{1 - \rho^2}} = {{ c.t_rho|tex:2 }} \qquad {{ adocao.p_spearman|valor_p_tex }}</p></li>
             </ol>
             {% if c.tem_empates %}<p class="{% classe 'passo' %} mt-3">Há empates (posto médio): o valor exato é o Pearson aplicado aos postos, ρ = {{ c.rho|num:3 }}.</p>{% endif %}
           </div>
@@ -313,13 +334,13 @@
             <p class="{% classe 'passo' %}">Mínimos quadrados: a reta que deixa a menor soma de erros ao quadrado (a linha do gráfico).</p>
             <ol class="mt-2.5 space-y-2.5">
               <li><p class="{% classe 'passo' %}">Inclinação</p>
-                <p class="{% classe 'formula' %}">b = S<sub>xy</sub> / S<sub>xx</sub> = {{ c.sxy|num:1 }} / {{ c.sxx|num:1 }} = {{ c.inclinacao|num:3 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>b = \dfrac{S_{xy}}{S_{xx}} = \dfrac{ {{ c.sxy|tex:1 }} }{ {{ c.sxx|tex:1 }} } = {{ c.inclinacao|tex:3 }}</p></li>
               <li><p class="{% classe 'passo' %}">Intercepto</p>
-                <p class="{% classe 'formula' %}">a = ȳ − b·x̄ = {{ c.media_y|num:2 }} − {{ c.inclinacao|num:3 }} · {{ c.media_x|num:2 }} = {{ c.intercepto|num:2 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>a = \bar{y} - b\,\bar{x} = {{ c.media_y|tex:2 }} - ({{ c.inclinacao|tex:3 }}) \cdot {{ c.media_x|tex:2 }} = {{ c.intercepto|tex:2 }}</p></li>
               <li><p class="{% classe 'passo' %}">Reta ajustada</p>
-                <p class="{% classe 'formula' %}">ŷ = <strong>{{ c.intercepto|num:2 }} + {{ c.inclinacao|num:3 }} · x</strong></p></li>
+                <p class="{% classe 'formula' %}" data-tex>\hat{y} = \mathbf{ {{ c.intercepto|tex:2 }} + {{ c.inclinacao|tex:3 }}\,x }</p></li>
               <li><p class="{% classe 'passo' %}">Quanto da variação a renda explica</p>
-                <p class="{% classe 'formula' %}">R² = r² = {{ c.r|num:3 }}² = {{ c.r2|num:2 }}</p></li>
+                <p class="{% classe 'formula' %}" data-tex>R^2 = r^2 = ({{ c.r|tex:3 }})^2 = {{ c.r2|tex:2 }}</p></li>
             </ol>
             <p class="{% classe 'passo' %} mt-3">A renda explica cerca de {{ c.r2|porcento }} da diferença de adoção entre condados; o resto vem de outros fatores.</p>
           </div>
@@ -364,12 +385,12 @@
           <div class="{% classe 'cartao' %}" role="group" aria-roledescription="cartão" aria-label="As contas">
             <ol class="space-y-2.5">
               <li><p class="{% classe 'passo' %}">Veículos (BEV + PHEV) por ponto público, qualquer nível</p>
-                <p class="{% classe 'formula' %}">{{ recarga_atual.veiculos|num:0 }} / {{ recarga_atual.pontos|num:0 }} = <strong>{% if recarga_atual.por_ponto %}{{ recarga_atual.por_ponto|num:1 }}{% else %}sem ponto{% endif %}</strong></p></li>
+                <p class="{% classe 'formula' %}" data-tex>\dfrac{ {{ recarga_atual.veiculos|tex:0 }} }{ {{ recarga_atual.pontos|tex:0 }} } = \mathbf{ {% if recarga_atual.por_ponto %}{{ recarga_atual.por_ponto|tex:1 }}{% else %}\text{sem ponto}{% endif %} }</p></li>
               <li><p class="{% classe 'passo' %}">BEV por ponto rápido (só o BEV depende 100% da tomada)</p>
-                <p class="{% classe 'formula' %}">{{ recarga_atual.bev|num:0 }} / {{ recarga_atual.rapidos|num:0 }} = <strong>{% if recarga_atual.bev_por_rapido %}{{ recarga_atual.bev_por_rapido|num:1 }}{% else %}sem ponto rápido{% endif %}</strong></p></li>
+                <p class="{% classe 'formula' %}" data-tex>\dfrac{ {{ recarga_atual.bev|tex:0 }} }{ {{ recarga_atual.rapidos|tex:0 }} } = \mathbf{ {% if recarga_atual.bev_por_rapido %}{{ recarga_atual.bev_por_rapido|tex:1 }}{% else %}\text{sem ponto rápido}{% endif %} }</p></li>
               {% if condado and recarga.estado.por_ponto and recarga_atual.por_ponto %}
               <li><p class="{% classe 'passo' %}">Comparado com o estado ({{ recarga.estado.por_ponto|num:1 }})</p>
-                <p class="{% classe 'formula' %}">{{ recarga_atual.por_ponto|num:1 }} / {{ recarga.estado.por_ponto|num:1 }} = {{ recarga_atual.por_ponto|razao:recarga.estado.por_ponto }}×</p></li>
+                <p class="{% classe 'formula' %}" data-tex>\dfrac{ {{ recarga_atual.por_ponto|tex:1 }} }{ {{ recarga.estado.por_ponto|tex:1 }} } = {{ recarga_atual.por_ponto|razao:recarga.estado.por_ponto|tex }}\times</p></li>
               {% endif %}
             </ol>
           </div>

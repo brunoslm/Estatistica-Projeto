@@ -439,6 +439,20 @@ def efeito_fim_do_credito(serie):
     }
 
 
+def magnitude_cohen(valor):
+    """Faixas de Cohen (1988) para |d|: 0,2 pequeno, 0,5 médio, 0,8 grande."""
+    if valor is None:
+        return None
+    tamanho = abs(valor)
+    if tamanho < 0.2:
+        return "desprezível"
+    if tamanho < 0.5:
+        return "pequeno"
+    if tamanho < 0.8:
+        return "médio"
+    return "grande"
+
+
 def conta_do_teste_pareado(meses, atuais, anteriores):
     """
     As contas do teste t pareado e do Wilcoxon, passo a passo, para mostrar no painel.
@@ -469,9 +483,31 @@ def conta_do_teste_pareado(meses, atuais, anteriores):
             {"mes": nome_do_mes(mes), "atual": atual, "anterior": anterior, "diferenca": d, "posto": posto}
         )
 
+    # Normalidade dos d (premissa do teste t): Shapiro-Wilk + pontos do gráfico Q-Q.
+    shapiro = stats.shapiro(diferencas) if n >= 3 and desvio else None
+    ordem = sorted(range(n), key=lambda i: diferencas[i])
+    qq = [
+        {
+            "mes": nome_do_mes(meses[i]),
+            "d": diferencas[i],
+            # quantil teórico da normal padrão pela posição de Blom: (i − 3/8) / (n + 1/4)
+            "z": float(stats.norm.ppf((posicao - 0.375) / (n + 0.25))),
+        }
+        for posicao, i in enumerate(ordem, start=1)
+    ]
+
+    # Tamanho do efeito: d de Cohen para dados pareados (d_z), quantos desvios-padrão a média está de zero.
+    cohen = media / desvio if desvio else None
+
     return {
         "linhas": linhas,
         "n": n,
+        "shapiro_w": float(shapiro.statistic) if shapiro else None,
+        "shapiro_p": float(shapiro.pvalue) if shapiro else None,
+        "normal": shapiro is not None and shapiro.pvalue >= 0.05,
+        "qq": qq,
+        "cohen": cohen,
+        "cohen_magnitude": magnitude_cohen(cohen),
         "soma_diferencas": sum(diferencas),
         "media": media,
         "desvio": desvio,

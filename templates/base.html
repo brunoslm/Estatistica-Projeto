@@ -12,7 +12,10 @@
   <link rel="icon" href="{% static 'icone.svg' %}" type="image/svg+xml">
   <link rel="preload" href="{% static 'fonts/inter-latin-wght-normal.woff2' %}" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/katex/katex.min.css' %}">
   <script defer src="{% static 'vendor/htmx.min.js' %}"></script>
+  <script defer src="{% static 'vendor/katex/katex.min.js' %}"></script>
+  <script defer src="{% static 'js/formulas.js' %}"></script>
   {% block scripts %}{% endblock %}
   {# Ordem importa: app.js registra os componentes no evento alpine:init, que o Alpine dispara ao carregar. #}
   <script defer src="{% static 'js/app.js' %}"></script>

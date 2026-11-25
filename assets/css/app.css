@@ -164,3 +164,8 @@
 .htmx-request.htmx-indicator {
   opacity: 1;
 }
+
+/* Fórmulas: esconde o código LaTeX cru até o KaTeX desenhar (static/js/formulas.js). */
+[data-tex]:not([data-tex-pronto]) {
+  visibility: hidden;
+}
